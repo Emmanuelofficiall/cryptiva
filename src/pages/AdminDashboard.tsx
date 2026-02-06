@@ -1,59 +1,163 @@
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
 import {
   Users, DollarSign, TrendingUp, Activity,
-  CheckCircle, XCircle, Eye, BarChart3, GitBranch
+  CheckCircle, XCircle, Eye, BarChart3, GitBranch, Loader2, ShieldAlert
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { Navigate } from "react-router-dom";
 
-const stats = [
-  { label: "Total Users", value: "10,234", icon: Users, change: "+12%" },
-  { label: "Total Invested", value: "RWF 2.5B", icon: DollarSign, change: "+8.3%" },
-  { label: "Active Plans", value: "3,421", icon: TrendingUp, change: "+15%" },
-  { label: "Pending Deposits", value: "47", icon: Activity, change: "-3%" },
-];
-
-const mockUsers = [
-  { id: 1, name: "Jean-Claude M.", email: "jean@mail.com", plan: "Gold", invested: "RWF 500,000", status: "active", referrals: 5 },
-  { id: 2, name: "Grace U.", email: "grace@mail.com", plan: "Bronze", invested: "RWF 100,000", status: "active", referrals: 3 },
-  { id: 3, name: "Patrick N.", email: "patrick@mail.com", plan: "Silver", invested: "RWF 250,000", status: "pending", referrals: 8 },
-  { id: 4, name: "Claudine M.", email: "claudine@mail.com", plan: "Starter", invested: "RWF 50,000", status: "active", referrals: 1 },
-  { id: 5, name: "Eric H.", email: "eric@mail.com", plan: "Gold", invested: "RWF 1,000,000", status: "suspended", referrals: 12 },
-];
-
-const mockDeposits = [
-  { id: 1, user: "Jean-Claude M.", amount: "RWF 200,000", method: "MTN MoMo", status: "pending", date: "2026-02-05" },
-  { id: 2, user: "Grace U.", amount: "RWF 50,000", method: "Airtel Money", status: "pending", date: "2026-02-05" },
-  { id: 3, user: "Patrick N.", amount: "RWF 100,000", method: "Bank Transfer", status: "approved", date: "2026-02-04" },
-  { id: 4, user: "Claudine M.", amount: "RWF 75,000", method: "MTN MoMo", status: "rejected", date: "2026-02-04" },
-];
-
-const referralStats = [
-  { user: "Eric H.", directRefs: 12, levelA: "RWF 150,000", levelB: "RWF 45,000", levelC: "RWF 12,000", total: "RWF 207,000" },
-  { user: "Patrick N.", directRefs: 8, levelA: "RWF 95,000", levelB: "RWF 28,000", levelC: "RWF 8,000", total: "RWF 131,000" },
-  { user: "Jean-Claude M.", directRefs: 5, levelA: "RWF 62,000", levelB: "RWF 15,000", levelC: "RWF 4,000", total: "RWF 81,000" },
-];
-
-type Tab = "overview" | "users" | "deposits" | "referrals";
+type Tab = "overview" | "users" | "deposits" | "withdrawals" | "referrals";
 
 const AdminDashboard = () => {
+  const { user, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const handleDeposit = (id: number, action: "approve" | "reject") => {
-    toast({
-      title: action === "approve" ? "Deposit Approved" : "Deposit Rejected",
-      description: `Deposit #${id} has been ${action}d.`,
-    });
+  // Check if user is admin
+  const { data: isAdmin, isLoading: roleLoading } = useQuery({
+    queryKey: ["isAdmin", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user!.id)
+        .eq("role", "admin")
+        .maybeSingle();
+      if (error) return false;
+      return !!data;
+    },
+  });
+
+  const { data: allProfiles } = useQuery({
+    queryKey: ["admin-profiles"],
+    enabled: !!isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: allDeposits, refetch: refetchDeposits } = useQuery({
+    queryKey: ["admin-deposits"],
+    enabled: !!isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("deposits").select("*").order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: allWithdrawals, refetch: refetchWithdrawals } = useQuery({
+    queryKey: ["admin-withdrawals"],
+    enabled: !!isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("withdrawals").select("*").order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: allInvestments } = useQuery({
+    queryKey: ["admin-investments"],
+    enabled: !!isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("investments").select("*");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: allCommissions } = useQuery({
+    queryKey: ["admin-commissions"],
+    enabled: !!isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("referral_commissions").select("*");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  if (authLoading || roleLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) return <Navigate to="/login" />;
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="pt-24 flex flex-col items-center justify-center text-center px-4">
+          <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
+          <h1 className="text-2xl font-display font-bold text-foreground mb-2">Access Denied</h1>
+          <p className="text-muted-foreground">You don't have admin privileges to access this page.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const totalUsers = allProfiles?.length || 0;
+  const totalInvested = allInvestments?.reduce((s, i) => s + Number(i.amount), 0) || 0;
+  const activeInvestments = allInvestments?.filter(i => i.status === "active").length || 0;
+  const pendingDeposits = allDeposits?.filter(d => d.status === "pending").length || 0;
+
+  const getProfileName = (userId: string) => {
+    const p = allProfiles?.find(p => p.user_id === userId);
+    return p?.full_name || p?.email || userId.slice(0, 8);
   };
+
+  const handleDeposit = async (id: string, action: "approved" | "rejected") => {
+    const { error } = await supabase
+      .from("deposits")
+      .update({ status: action, reviewed_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: action === "approved" ? "Deposit Approved" : "Deposit Rejected" });
+      refetchDeposits();
+    }
+  };
+
+  const handleWithdrawal = async (id: string, action: "approved" | "rejected") => {
+    const { error } = await supabase
+      .from("withdrawals")
+      .update({ status: action, reviewed_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: action === "approved" ? "Withdrawal Approved" : "Withdrawal Rejected" });
+      refetchWithdrawals();
+    }
+  };
+
+  const stats = [
+    { label: "Total Users", value: totalUsers.toLocaleString(), icon: Users, change: `${totalUsers}` },
+    { label: "Total Invested", value: `RWF ${totalInvested.toLocaleString()}`, icon: DollarSign, change: "" },
+    { label: "Active Plans", value: activeInvestments.toLocaleString(), icon: TrendingUp, change: "" },
+    { label: "Pending Deposits", value: pendingDeposits.toLocaleString(), icon: Activity, change: "" },
+  ];
 
   const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
     { key: "overview", label: "Overview", icon: BarChart3 },
     { key: "users", label: "Users", icon: Users },
     { key: "deposits", label: "Deposits", icon: DollarSign },
+    { key: "withdrawals", label: "Withdrawals", icon: Activity },
     { key: "referrals", label: "Referrals", icon: GitBranch },
   ];
 
@@ -63,16 +167,15 @@ const AdminDashboard = () => {
       <div className="pt-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
         <div className="mb-8">
           <h1 className="text-2xl font-display font-bold text-foreground">Admin Dashboard</h1>
-          <p className="text-sm text-muted-foreground">Manage users, deposits, and referral commissions.</p>
+          <p className="text-sm text-muted-foreground">Manage users, deposits, withdrawals and referrals.</p>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 mb-8 bg-secondary rounded-xl p-1 w-fit">
+        <div className="flex gap-1 mb-8 bg-secondary rounded-xl p-1 w-fit overflow-x-auto">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
                 activeTab === tab.key
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground"
@@ -92,9 +195,6 @@ const AdminDashboard = () => {
                 <div key={stat.label} className="glass-card p-5">
                   <div className="flex items-center justify-between mb-3">
                     <stat.icon className="w-5 h-5 text-primary" />
-                    <span className={`text-xs font-semibold ${stat.change.startsWith("+") ? "text-primary" : "text-destructive"}`}>
-                      {stat.change}
-                    </span>
                   </div>
                   <p className="text-2xl font-display font-bold text-foreground">{stat.value}</p>
                   <p className="text-xs text-muted-foreground">{stat.label}</p>
@@ -103,54 +203,59 @@ const AdminDashboard = () => {
             </div>
 
             <div className="grid lg:grid-cols-2 gap-6">
-              {/* Recent Deposits */}
               <div className="glass-card overflow-hidden">
                 <div className="p-5 border-b border-border flex items-center justify-between">
                   <h3 className="font-display font-semibold text-foreground">Recent Deposits</h3>
-                  <Button variant="ghost" size="sm" onClick={() => setActiveTab("deposits")} className="text-primary text-xs">
-                    View All
-                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setActiveTab("deposits")} className="text-primary text-xs">View All</Button>
                 </div>
                 <div className="divide-y divide-border/50">
-                  {mockDeposits.slice(0, 3).map((d) => (
+                  {(allDeposits || []).slice(0, 4).map((d) => (
                     <div key={d.id} className="p-4 flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-foreground">{d.user}</p>
-                        <p className="text-xs text-muted-foreground">{d.method} • {d.date}</p>
+                        <p className="text-sm font-medium text-foreground">{getProfileName(d.user_id)}</p>
+                        <p className="text-xs text-muted-foreground">{d.method} • {new Date(d.created_at!).toLocaleDateString()}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-semibold text-foreground">{d.amount}</p>
+                        <p className="text-sm font-semibold text-foreground">{d.currency} {Number(d.amount).toLocaleString()}</p>
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                           d.status === "approved" ? "bg-primary/10 text-primary" :
                           d.status === "rejected" ? "bg-destructive/10 text-destructive" :
                           "bg-warning/10 text-warning"
-                        }`}>
-                          {d.status}
-                        </span>
+                        }`}>{d.status}</span>
                       </div>
                     </div>
                   ))}
+                  {(!allDeposits || allDeposits.length === 0) && (
+                    <div className="p-6 text-center text-muted-foreground text-sm">No deposits yet</div>
+                  )}
                 </div>
               </div>
 
-              {/* Top Referrers */}
               <div className="glass-card overflow-hidden">
                 <div className="p-5 border-b border-border flex items-center justify-between">
-                  <h3 className="font-display font-semibold text-foreground">Top Referrers</h3>
-                  <Button variant="ghost" size="sm" onClick={() => setActiveTab("referrals")} className="text-primary text-xs">
-                    View All
-                  </Button>
+                  <h3 className="font-display font-semibold text-foreground">Recent Withdrawals</h3>
+                  <Button variant="ghost" size="sm" onClick={() => setActiveTab("withdrawals")} className="text-primary text-xs">View All</Button>
                 </div>
                 <div className="divide-y divide-border/50">
-                  {referralStats.map((r) => (
-                    <div key={r.user} className="p-4 flex items-center justify-between">
+                  {(allWithdrawals || []).slice(0, 4).map((w) => (
+                    <div key={w.id} className="p-4 flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-foreground">{r.user}</p>
-                        <p className="text-xs text-muted-foreground">{r.directRefs} direct referrals</p>
+                        <p className="text-sm font-medium text-foreground">{getProfileName(w.user_id)}</p>
+                        <p className="text-xs text-muted-foreground">{w.method} • {new Date(w.created_at!).toLocaleDateString()}</p>
                       </div>
-                      <p className="text-sm font-semibold text-primary">{r.total}</p>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-foreground">RWF {Number(w.amount).toLocaleString()}</p>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                          w.status === "approved" ? "bg-primary/10 text-primary" :
+                          w.status === "rejected" ? "bg-destructive/10 text-destructive" :
+                          "bg-warning/10 text-warning"
+                        }`}>{w.status}</span>
+                      </div>
                     </div>
                   ))}
+                  {(!allWithdrawals || allWithdrawals.length === 0) && (
+                    <div className="p-6 text-center text-muted-foreground text-sm">No withdrawals yet</div>
+                  )}
                 </div>
               </div>
             </div>
@@ -173,37 +278,24 @@ const AdminDashboard = () => {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-border">
-                      {["Name", "Email", "Plan", "Invested", "Referrals", "Status", "Actions"].map((h) => (
+                      {["Name", "Email", "Referral Code", "Wallet Balance", "Joined"].map((h) => (
                         <th key={h} className="text-left text-xs text-muted-foreground font-medium p-4">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {mockUsers
-                      .filter((u) => u.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                    {(allProfiles || [])
+                      .filter((u) =>
+                        (u.full_name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        (u.email || "").toLowerCase().includes(searchQuery.toLowerCase())
+                      )
                       .map((u) => (
                       <tr key={u.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
-                        <td className="p-4 text-sm font-medium text-foreground">{u.name}</td>
+                        <td className="p-4 text-sm font-medium text-foreground">{u.full_name || "—"}</td>
                         <td className="p-4 text-sm text-muted-foreground">{u.email}</td>
-                        <td className="p-4">
-                          <span className="text-xs font-semibold bg-primary/10 text-primary px-2 py-1 rounded-full">{u.plan}</span>
-                        </td>
-                        <td className="p-4 text-sm text-foreground">{u.invested}</td>
-                        <td className="p-4 text-sm text-foreground">{u.referrals}</td>
-                        <td className="p-4">
-                          <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                            u.status === "active" ? "bg-primary/10 text-primary" :
-                            u.status === "pending" ? "bg-warning/10 text-warning" :
-                            "bg-destructive/10 text-destructive"
-                          }`}>
-                            {u.status}
-                          </span>
-                        </td>
-                        <td className="p-4">
-                          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                        </td>
+                        <td className="p-4 text-sm font-mono text-primary">{u.referral_code}</td>
+                        <td className="p-4 text-sm text-foreground">RWF {Number(u.wallet_balance || 0).toLocaleString()}</td>
+                        <td className="p-4 text-sm text-muted-foreground">{new Date(u.created_at!).toLocaleDateString()}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -220,34 +312,33 @@ const AdminDashboard = () => {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border">
-                    {["User", "Amount", "Method", "Date", "Status", "Actions"].map((h) => (
+                    {["User", "Amount", "Method", "Ref", "Date", "Status", "Actions"].map((h) => (
                       <th key={h} className="text-left text-xs text-muted-foreground font-medium p-4">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {mockDeposits.map((d) => (
+                  {(allDeposits || []).map((d) => (
                     <tr key={d.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
-                      <td className="p-4 text-sm font-medium text-foreground">{d.user}</td>
-                      <td className="p-4 text-sm text-foreground font-semibold">{d.amount}</td>
+                      <td className="p-4 text-sm font-medium text-foreground">{getProfileName(d.user_id)}</td>
+                      <td className="p-4 text-sm text-foreground font-semibold">{d.currency} {Number(d.amount).toLocaleString()}</td>
                       <td className="p-4 text-sm text-muted-foreground">{d.method}</td>
-                      <td className="p-4 text-sm text-muted-foreground">{d.date}</td>
+                      <td className="p-4 text-sm text-muted-foreground font-mono">{d.transaction_ref || "—"}</td>
+                      <td className="p-4 text-sm text-muted-foreground">{new Date(d.created_at!).toLocaleDateString()}</td>
                       <td className="p-4">
                         <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
                           d.status === "approved" ? "bg-primary/10 text-primary" :
                           d.status === "rejected" ? "bg-destructive/10 text-destructive" :
                           "bg-warning/10 text-warning"
-                        }`}>
-                          {d.status}
-                        </span>
+                        }`}>{d.status}</span>
                       </td>
                       <td className="p-4">
                         {d.status === "pending" ? (
                           <div className="flex gap-2">
-                            <Button size="sm" onClick={() => handleDeposit(d.id, "approve")} className="bg-primary text-primary-foreground hover:bg-primary/90 h-8 text-xs">
+                            <Button size="sm" onClick={() => handleDeposit(d.id, "approved")} className="bg-primary text-primary-foreground hover:bg-primary/90 h-8 text-xs">
                               <CheckCircle className="w-3 h-3 mr-1" /> Approve
                             </Button>
-                            <Button size="sm" variant="outline" onClick={() => handleDeposit(d.id, "reject")} className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground h-8 text-xs">
+                            <Button size="sm" variant="outline" onClick={() => handleDeposit(d.id, "rejected")} className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground h-8 text-xs">
                               <XCircle className="w-3 h-3 mr-1" /> Reject
                             </Button>
                           </div>
@@ -257,6 +348,61 @@ const AdminDashboard = () => {
                       </td>
                     </tr>
                   ))}
+                  {(!allDeposits || allDeposits.length === 0) && (
+                    <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">No deposits yet</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Withdrawals Tab */}
+        {activeTab === "withdrawals" && (
+          <div className="glass-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    {["User", "Amount", "Method", "Destination", "Date", "Status", "Actions"].map((h) => (
+                      <th key={h} className="text-left text-xs text-muted-foreground font-medium p-4">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(allWithdrawals || []).map((w) => (
+                    <tr key={w.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                      <td className="p-4 text-sm font-medium text-foreground">{getProfileName(w.user_id)}</td>
+                      <td className="p-4 text-sm text-foreground font-semibold">RWF {Number(w.amount).toLocaleString()}</td>
+                      <td className="p-4 text-sm text-muted-foreground">{w.method}</td>
+                      <td className="p-4 text-sm text-muted-foreground font-mono">{w.destination}</td>
+                      <td className="p-4 text-sm text-muted-foreground">{new Date(w.created_at!).toLocaleDateString()}</td>
+                      <td className="p-4">
+                        <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                          w.status === "approved" ? "bg-primary/10 text-primary" :
+                          w.status === "rejected" ? "bg-destructive/10 text-destructive" :
+                          "bg-warning/10 text-warning"
+                        }`}>{w.status}</span>
+                      </td>
+                      <td className="p-4">
+                        {w.status === "pending" ? (
+                          <div className="flex gap-2">
+                            <Button size="sm" onClick={() => handleWithdrawal(w.id, "approved")} className="bg-primary text-primary-foreground hover:bg-primary/90 h-8 text-xs">
+                              <CheckCircle className="w-3 h-3 mr-1" /> Approve
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => handleWithdrawal(w.id, "rejected")} className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground h-8 text-xs">
+                              <XCircle className="w-3 h-3 mr-1" /> Reject
+                            </Button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  {(!allWithdrawals || allWithdrawals.length === 0) && (
+                    <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">No withdrawals yet</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -286,28 +432,33 @@ const AdminDashboard = () => {
 
             <div className="glass-card overflow-hidden">
               <div className="p-5 border-b border-border">
-                <h3 className="font-display font-semibold text-foreground">Referral Commission Breakdown</h3>
+                <h3 className="font-display font-semibold text-foreground">All Referral Commissions</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-border">
-                      {["User", "Direct Refs", "Level A (5%)", "Level B (3%)", "Level C (1%)", "Total Earned"].map((h) => (
+                      {["Earner", "From User", "Level", "Rate", "Amount", "Date"].map((h) => (
                         <th key={h} className="text-left text-xs text-muted-foreground font-medium p-4">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {referralStats.map((r) => (
-                      <tr key={r.user} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
-                        <td className="p-4 text-sm font-medium text-foreground">{r.user}</td>
-                        <td className="p-4 text-sm text-foreground">{r.directRefs}</td>
-                        <td className="p-4 text-sm text-primary">{r.levelA}</td>
-                        <td className="p-4 text-sm text-primary/80">{r.levelB}</td>
-                        <td className="p-4 text-sm text-primary/60">{r.levelC}</td>
-                        <td className="p-4 text-sm font-bold text-foreground">{r.total}</td>
+                    {(allCommissions || []).map((c) => (
+                      <tr key={c.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                        <td className="p-4 text-sm font-medium text-foreground">{getProfileName(c.user_id)}</td>
+                        <td className="p-4 text-sm text-muted-foreground">{getProfileName(c.from_user_id)}</td>
+                        <td className="p-4">
+                          <span className="text-xs font-semibold bg-primary/10 text-primary px-2 py-1 rounded-full">Level {c.level}</span>
+                        </td>
+                        <td className="p-4 text-sm text-foreground">{c.rate}%</td>
+                        <td className="p-4 text-sm text-primary font-semibold">RWF {Number(c.amount).toLocaleString()}</td>
+                        <td className="p-4 text-sm text-muted-foreground">{new Date(c.created_at!).toLocaleDateString()}</td>
                       </tr>
                     ))}
+                    {(!allCommissions || allCommissions.length === 0) && (
+                      <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No referral commissions yet</td></tr>
+                    )}
                   </tbody>
                 </table>
               </div>
