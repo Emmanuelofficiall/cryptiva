@@ -58,12 +58,18 @@ const Referral = () => {
   if (!user) return <Navigate to="/login" />;
 
   const referralCode = profile?.referral_code || "—";
+  const referralLink = `${window.location.origin}/login?ref=${referralCode}`;
   const totalEarnings = commissions?.reduce((s, c) => s + Number(c.amount), 0) || 0;
   const totalReferrals = commissions?.length || 0;
 
   const copyCode = () => {
     navigator.clipboard.writeText(referralCode);
     toast({ title: "Copied!", description: "Referral code copied to clipboard." });
+  };
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(referralLink);
+    toast({ title: "Copied!", description: "Referral link copied to clipboard." });
   };
 
   return (
@@ -84,13 +90,20 @@ const Referral = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="glass-card p-6 max-w-md mx-auto text-center mb-12 glow-green"
+          className="glass-card p-6 max-w-lg mx-auto text-center mb-12 glow-green"
         >
           <Gift className="w-10 h-10 text-primary mx-auto mb-3" />
           <p className="text-sm text-muted-foreground mb-2">Your Referral Code</p>
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex items-center justify-center gap-3 mb-4">
             <span className="text-2xl font-mono font-bold text-foreground tracking-wider">{referralCode}</span>
             <Button size="sm" variant="outline" onClick={copyCode} className="border-border hover:bg-primary hover:text-primary-foreground">
+              <Copy className="w-4 h-4" />
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground mb-2">Your Referral Link</p>
+          <div className="flex items-center gap-2 bg-secondary rounded-lg p-3">
+            <code className="text-xs text-foreground font-mono break-all flex-1">{referralLink}</code>
+            <Button size="sm" variant="outline" onClick={copyLink} className="border-border hover:bg-primary hover:text-primary-foreground shrink-0">
               <Copy className="w-4 h-4" />
             </Button>
           </div>
