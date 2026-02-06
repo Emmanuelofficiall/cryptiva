@@ -10,7 +10,7 @@ const Footer = () => {
             <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
               <DollarSign className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="font-display font-bold text-foreground">InvestRW</span>
+            <span className="font-display font-bold text-foreground">Cryptiva</span>
           </div>
           <div className="flex gap-6 text-sm text-muted-foreground">
             <Link to="/" className="hover:text-foreground transition-colors">Home</Link>
@@ -18,7 +18,7 @@ const Footer = () => {
             <Link to="/referral" className="hover:text-foreground transition-colors">Referral</Link>
             <Link to="/login" className="hover:text-foreground transition-colors">Login</Link>
           </div>
-          <p className="text-xs text-muted-foreground">© 2026 InvestRW. All rights reserved.</p>
+          <p className="text-xs text-muted-foreground">© 2026 Cryptiva. All rights reserved.</p>
         </div>
       </div>
     </footer>

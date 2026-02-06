@@ -38,7 +38,7 @@ const TestimonialsSection = () => {
         <div className="text-center mb-16">
           <p className="text-sm text-primary font-semibold uppercase tracking-wider mb-3">Success Stories</p>
           <h2 className="text-3xl sm:text-4xl font-display font-bold text-foreground">
-            Trusted by Rwandan Investors
+            Trusted by Our Investors
           </h2>
         </div>
 

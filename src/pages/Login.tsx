@@ -59,7 +59,7 @@ const Login = () => {
             <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
               <DollarSign className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-2xl font-display font-bold text-foreground">InvestRW</span>
+            <span className="text-2xl font-display font-bold text-foreground">Cryptiva</span>
           </Link>
           <h1 className="text-2xl font-display font-bold text-foreground">
             {isLogin ? "Welcome Back" : "Create Account"}

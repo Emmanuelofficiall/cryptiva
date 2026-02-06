@@ -16,7 +16,7 @@ const HeroSection = () => {
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border/50 bg-card/50 mb-8">
               <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Trusted by 10,000+ Rwandans
+                Trusted by 10,000+ Investors
               </span>
             </div>
 

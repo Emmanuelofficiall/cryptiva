@@ -11,7 +11,7 @@ const CTASection = () => {
           Ready to Start <span className="text-gradient">Growing Your Wealth?</span>
         </h2>
         <p className="text-muted-foreground mb-8 max-w-lg mx-auto">
-          Join 10,000+ Rwandan investors earning daily returns. Create your account in minutes and start your first investment today.
+          Join 10,000+ investors earning daily returns. Create your account in minutes and start your first investment today.
         </p>
         <Link to="/login">
           <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 px-10 glow-green">

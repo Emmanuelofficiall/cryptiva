@@ -15,7 +15,7 @@ const FeaturesSection = () => {
     <section className="py-24 bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <p className="text-sm text-primary font-semibold uppercase tracking-wider mb-3">Why Choose InvestRW</p>
+          <p className="text-sm text-primary font-semibold uppercase tracking-wider mb-3">Why Choose Cryptiva</p>
           <h2 className="text-3xl sm:text-4xl font-display font-bold text-foreground">
             Everything You Need to <span className="text-gradient">Grow Your Wealth</span>
           </h2>

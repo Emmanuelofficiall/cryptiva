@@ -1,9 +1,13 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Users, Copy, TrendingUp, Gift } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { Users, Copy, TrendingUp, Gift, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
+import { Navigate } from "react-router-dom";
 
 const levels = [
   { level: "A", label: "Direct Referral", rate: "5%", color: "text-primary", desc: "Earn 5% commission on every investment made by people you directly invite." },
@@ -11,17 +15,51 @@ const levels = [
   { level: "C", label: "3rd Level", rate: "1%", color: "text-primary/60", desc: "Earn 1% commission from the third tier of your referral network." },
 ];
 
-const mockReferrals = [
-  { name: "Alice K.", level: "A", invested: "RWF 200,000", commission: "RWF 10,000", date: "2026-01-15" },
-  { name: "Bob M.", level: "A", invested: "RWF 500,000", commission: "RWF 25,000", date: "2026-01-20" },
-  { name: "Claire N.", level: "B", invested: "RWF 100,000", commission: "RWF 3,000", date: "2026-01-22" },
-  { name: "David R.", level: "B", invested: "RWF 300,000", commission: "RWF 9,000", date: "2026-02-01" },
-  { name: "Eve T.", level: "C", invested: "RWF 150,000", commission: "RWF 1,500", date: "2026-02-03" },
-];
-
 const Referral = () => {
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  const referralCode = "INVEST-JC2024";
+
+  const { data: profile } = useQuery({
+    queryKey: ["profile", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: commissions } = useQuery({
+    queryKey: ["commissions", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("referral_commissions")
+        .select("*")
+        .eq("user_id", user!.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) return <Navigate to="/login" />;
+
+  const referralCode = profile?.referral_code || "—";
+  const totalEarnings = commissions?.reduce((s, c) => s + Number(c.amount), 0) || 0;
+  const totalReferrals = commissions?.length || 0;
 
   const copyCode = () => {
     navigator.clipboard.writeText(referralCode);
@@ -81,9 +119,9 @@ const Referral = () => {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-6 mb-12">
           {[
-            { icon: Users, label: "Total Referrals", value: "12" },
-            { icon: TrendingUp, label: "Total Earnings", value: "RWF 48,500" },
-            { icon: Gift, label: "Active Network", value: "8" },
+            { icon: Users, label: "Total Referrals", value: totalReferrals.toString() },
+            { icon: TrendingUp, label: "Total Earnings", value: `RWF ${totalEarnings.toLocaleString()}` },
+            { icon: Gift, label: "Your Code", value: referralCode },
           ].map((stat) => (
             <div key={stat.label} className="glass-card p-5 text-center">
               <stat.icon className="w-6 h-6 text-primary mx-auto mb-2" />
@@ -93,36 +131,40 @@ const Referral = () => {
           ))}
         </div>
 
-        {/* Referral Table */}
+        {/* Commissions Table */}
         <div className="glass-card overflow-hidden">
           <div className="p-5 border-b border-border">
-            <h3 className="text-lg font-display font-semibold text-foreground">Recent Referral Commissions</h3>
+            <h3 className="text-lg font-display font-semibold text-foreground">Your Referral Commissions</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left text-xs text-muted-foreground font-medium p-4">Name</th>
                   <th className="text-left text-xs text-muted-foreground font-medium p-4">Level</th>
-                  <th className="text-left text-xs text-muted-foreground font-medium p-4">Invested</th>
+                  <th className="text-left text-xs text-muted-foreground font-medium p-4">Rate</th>
                   <th className="text-left text-xs text-muted-foreground font-medium p-4">Commission</th>
                   <th className="text-left text-xs text-muted-foreground font-medium p-4">Date</th>
                 </tr>
               </thead>
               <tbody>
-                {mockReferrals.map((r, i) => (
-                  <tr key={i} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
-                    <td className="p-4 text-sm text-foreground">{r.name}</td>
+                {commissions && commissions.length > 0 ? commissions.map((c) => (
+                  <tr key={c.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
                     <td className="p-4">
                       <span className="text-xs font-semibold bg-primary/10 text-primary px-2 py-1 rounded-full">
-                        Level {r.level}
+                        Level {c.level}
                       </span>
                     </td>
-                    <td className="p-4 text-sm text-foreground">{r.invested}</td>
-                    <td className="p-4 text-sm text-primary font-semibold">{r.commission}</td>
-                    <td className="p-4 text-sm text-muted-foreground">{r.date}</td>
+                    <td className="p-4 text-sm text-foreground">{c.rate}%</td>
+                    <td className="p-4 text-sm text-primary font-semibold">RWF {Number(c.amount).toLocaleString()}</td>
+                    <td className="p-4 text-sm text-muted-foreground">{new Date(c.created_at!).toLocaleDateString()}</td>
                   </tr>
-                ))}
+                )) : (
+                  <tr>
+                    <td colSpan={4} className="p-8 text-center text-muted-foreground">
+                      No commissions yet. Share your referral code to start earning!
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
