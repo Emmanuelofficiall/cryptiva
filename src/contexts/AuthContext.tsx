@@ -19,15 +19,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
+    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      setLoading(false);
+    }).catch(() => {
       setLoading(false);
     });
 
@@ -73,6 +77,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) throw new Error("useAuth must be used within an AuthProvider");
+  if (!context) {
+    // Return a safe default if provider hasn't mounted yet
+    return {
+      user: null,
+      session: null,
+      loading: true,
+      signUp: async () => ({ error: new Error("Auth not initialized") }),
+      signIn: async () => ({ error: new Error("Auth not initialized") }),
+      signOut: async () => {},
+    } as AuthContextType;
+  }
   return context;
 };
