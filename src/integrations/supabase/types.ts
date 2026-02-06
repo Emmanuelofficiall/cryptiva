@@ -14,13 +14,246 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      daily_earnings: {
+        Row: {
+          amount: number
+          created_at: string | null
+          earned_date: string | null
+          id: string
+          investment_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          earned_date?: string | null
+          id?: string
+          investment_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          earned_date?: string | null
+          id?: string
+          investment_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_earnings_investment_id_fkey"
+            columns: ["investment_id"]
+            isOneToOne: false
+            referencedRelation: "investments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deposits: {
+        Row: {
+          amount: number
+          created_at: string | null
+          currency: string | null
+          id: string
+          method: string
+          reviewed_at: string | null
+          status: string | null
+          transaction_ref: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          method: string
+          reviewed_at?: string | null
+          status?: string | null
+          transaction_ref?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          method?: string
+          reviewed_at?: string | null
+          status?: string | null
+          transaction_ref?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      investments: {
+        Row: {
+          amount: number
+          created_at: string | null
+          daily_rate: number
+          duration_days: number
+          expires_at: string | null
+          id: string
+          plan_name: string
+          started_at: string | null
+          status: string | null
+          total_earned: number | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          daily_rate: number
+          duration_days: number
+          expires_at?: string | null
+          id?: string
+          plan_name: string
+          started_at?: string | null
+          status?: string | null
+          total_earned?: number | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          daily_rate?: number
+          duration_days?: number
+          expires_at?: string | null
+          id?: string
+          plan_name?: string
+          started_at?: string | null
+          status?: string | null
+          total_earned?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          referral_code: string | null
+          referred_by: string | null
+          updated_at: string | null
+          user_id: string
+          wallet_balance: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          referral_code?: string | null
+          referred_by?: string | null
+          updated_at?: string | null
+          user_id: string
+          wallet_balance?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          referral_code?: string | null
+          referred_by?: string | null
+          updated_at?: string | null
+          user_id?: string
+          wallet_balance?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_commissions: {
+        Row: {
+          amount: number
+          created_at: string | null
+          from_user_id: string
+          id: string
+          investment_id: string | null
+          level: string
+          rate: number
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          from_user_id: string
+          id?: string
+          investment_id?: string | null
+          level: string
+          rate: number
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          from_user_id?: string
+          id?: string
+          investment_id?: string | null
+          level?: string
+          rate?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_commissions_investment_id_fkey"
+            columns: ["investment_id"]
+            isOneToOne: false
+            referencedRelation: "investments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      withdrawals: {
+        Row: {
+          amount: number
+          created_at: string | null
+          destination: string
+          id: string
+          method: string
+          reviewed_at: string | null
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          destination: string
+          id?: string
+          method: string
+          reviewed_at?: string | null
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          destination?: string
+          id?: string
+          method?: string
+          reviewed_at?: string | null
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      link_referral: {
+        Args: { new_user_id: string; referrer_code: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

@@ -1,11 +1,14 @@
-import { Link, useLocation } from "react-router-dom";
-import { DollarSign, BarChart3, Menu, X } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { DollarSign, BarChart3, Menu, X, LogOut } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Navbar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user, signOut } = useAuth();
 
   const links = [
     { to: "/", label: "Home" },
@@ -13,6 +16,11 @@ const Navbar = () => {
     { to: "/plans", label: "Investment Plans" },
     { to: "/referral", label: "Referral" },
   ];
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50">
@@ -42,17 +50,34 @@ const Navbar = () => {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            <Link to="/login">
-              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-                Login
-              </Button>
-            </Link>
-            <Link to="/admin">
-              <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2">
-                <BarChart3 className="w-4 h-4" />
-                Dashboard
-              </Button>
-            </Link>
+            {user ? (
+              <>
+                <Link to="/dashboard">
+                  <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2">
+                    <BarChart3 className="w-4 h-4" />
+                    My Dashboard
+                  </Button>
+                </Link>
+                <Button size="sm" variant="ghost" onClick={handleSignOut} className="text-muted-foreground hover:text-foreground gap-2">
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <>
+                <Link to="/login">
+                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                    Login
+                  </Button>
+                </Link>
+                <Link to="/login">
+                  <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2">
+                    <BarChart3 className="w-4 h-4" />
+                    Get Started
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
 
           <button className="md:hidden text-foreground" onClick={() => setMobileOpen(!mobileOpen)}>
@@ -73,9 +98,15 @@ const Navbar = () => {
               {link.label}
             </Link>
           ))}
-          <Link to="/login" onClick={() => setMobileOpen(false)}>
-            <Button variant="outline" size="sm" className="w-full mt-2">Login</Button>
-          </Link>
+          {user ? (
+            <Button variant="outline" size="sm" className="w-full mt-2" onClick={handleSignOut}>
+              Logout
+            </Button>
+          ) : (
+            <Link to="/login" onClick={() => setMobileOpen(false)}>
+              <Button variant="outline" size="sm" className="w-full mt-2">Login</Button>
+            </Link>
+          )}
         </div>
       )}
     </nav>
