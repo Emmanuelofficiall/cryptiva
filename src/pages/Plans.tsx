@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,13 +11,15 @@ import { ArrowRight, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 
+const USDT_TO_RWF = 1349;
+
 const allPlans = [
-  { name: "Starter", rate: 5, min: 50000, max: 99000, duration: 30, badge: null },
-  { name: "Bronze", rate: 7, min: 100000, max: 249000, duration: 45, badge: "Popular" },
-  { name: "Silver", rate: 10, min: 250000, max: 499000, duration: 60, badge: null },
-  { name: "Gold", rate: 12, min: 500000, max: 999000, duration: 90, badge: "Best Value" },
-  { name: "Platinum", rate: 15, min: 1000000, max: 4999000, duration: 120, badge: null },
-  { name: "Diamond", rate: 18, min: 5000000, max: null, duration: 180, badge: "VIP" },
+  { name: "Bitcoin", rate: 5, minUsdt: 37, maxUsdt: 73, duration: 30, badge: null },
+  { name: "Ethereum", rate: 7, minUsdt: 74, maxUsdt: 184, duration: 45, badge: "Popular" },
+  { name: "Solana", rate: 10, minUsdt: 185, maxUsdt: 370, duration: 60, badge: null },
+  { name: "Cardano", rate: 12, minUsdt: 370, maxUsdt: 740, duration: 90, badge: "Best Value" },
+  { name: "Polkadot", rate: 15, minUsdt: 741, maxUsdt: 3700, duration: 120, badge: null },
+  { name: "Avalanche", rate: 18, minUsdt: 3701, maxUsdt: null, duration: 180, badge: "VIP" },
 ];
 
 const Plans = () => {
@@ -30,16 +32,13 @@ const Plans = () => {
 
   const handleInvest = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
-      navigate("/login");
-      return;
-    }
+    if (!user) { navigate("/login"); return; }
     if (!selectedPlan) return;
-    const amount = Number(investAmount);
-    if (amount < selectedPlan.min || (selectedPlan.max && amount > selectedPlan.max)) {
+    const amountUsdt = Number(investAmount);
+    if (amountUsdt < selectedPlan.minUsdt || (selectedPlan.maxUsdt && amountUsdt > selectedPlan.maxUsdt)) {
       toast({
         title: "Invalid amount",
-        description: `Amount must be between RWF ${selectedPlan.min.toLocaleString()} and ${selectedPlan.max ? `RWF ${selectedPlan.max.toLocaleString()}` : "unlimited"}.`,
+        description: `Amount must be between $${selectedPlan.minUsdt} and ${selectedPlan.maxUsdt ? `$${selectedPlan.maxUsdt}` : "unlimited"} USDT.`,
         variant: "destructive",
       });
       return;
@@ -48,17 +47,18 @@ const Plans = () => {
     try {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + selectedPlan.duration);
+      const rwfAmount = amountUsdt * USDT_TO_RWF;
 
       const { error } = await supabase.from("investments").insert({
         user_id: user.id,
         plan_name: selectedPlan.name,
-        amount,
+        amount: rwfAmount,
         daily_rate: selectedPlan.rate,
         duration_days: selectedPlan.duration,
         expires_at: expiresAt.toISOString(),
       });
       if (error) throw error;
-      toast({ title: "Investment Created!", description: `You've invested RWF ${amount.toLocaleString()} in the ${selectedPlan.name} plan.` });
+      toast({ title: "Investment Created!", description: `You've invested $${amountUsdt} USDT (≈ RWF ${rwfAmount.toLocaleString()}) in the ${selectedPlan.name} plan.` });
       setSelectedPlan(null);
       setInvestAmount("");
       navigate("/dashboard");
@@ -79,7 +79,7 @@ const Plans = () => {
             Choose Your <span className="text-gradient">Growth Path</span>
           </h1>
           <p className="text-muted-foreground mt-4 max-w-lg mx-auto">
-            Select from 6 carefully designed plans to match your investment goals.
+            Select from 6 crypto-powered plans. Amounts shown in USDT &amp; RWF.
           </p>
         </div>
 
@@ -95,20 +95,25 @@ const Plans = () => {
               <p className="text-sm text-muted-foreground mb-6">{selectedPlan.rate}% daily return • {selectedPlan.duration} days</p>
               <form onSubmit={handleInvest} className="space-y-4">
                 <div>
-                  <Label className="text-foreground text-sm">Investment Amount (RWF)</Label>
+                  <Label className="text-foreground text-sm">Investment Amount (USDT)</Label>
                   <Input
                     type="number"
                     value={investAmount}
                     onChange={(e) => setInvestAmount(e.target.value)}
-                    placeholder={`Min: RWF ${selectedPlan.min.toLocaleString()}`}
+                    placeholder={`Min: $${selectedPlan.minUsdt} USDT`}
                     className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground"
                     required
-                    min={selectedPlan.min}
-                    max={selectedPlan.max || undefined}
+                    min={selectedPlan.minUsdt}
+                    max={selectedPlan.maxUsdt || undefined}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Range: RWF {selectedPlan.min.toLocaleString()} – {selectedPlan.max ? `RWF ${selectedPlan.max.toLocaleString()}` : "Unlimited"}
+                    Range: ${selectedPlan.minUsdt} – {selectedPlan.maxUsdt ? `$${selectedPlan.maxUsdt}` : "Unlimited"} USDT
                   </p>
+                  {investAmount && Number(investAmount) > 0 && (
+                    <p className="text-xs text-primary mt-1">
+                      ≈ RWF {(Number(investAmount) * USDT_TO_RWF).toLocaleString()}
+                    </p>
+                  )}
                 </div>
                 <div className="flex gap-3">
                   <Button type="submit" disabled={submitting} className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 glow-green">
@@ -143,8 +148,9 @@ const Plans = () => {
               <p className="text-sm text-muted-foreground mb-6">daily return</p>
               <div className="space-y-3 mb-6 text-sm">
                 {[
-                  ["Min. Deposit", `RWF ${plan.min.toLocaleString()}`],
-                  ["Max. Deposit", plan.max ? `RWF ${plan.max.toLocaleString()}` : "Unlimited"],
+                  ["Min. Deposit", `$${plan.minUsdt} USDT`],
+                  ["≈ RWF", `RWF ${(plan.minUsdt * USDT_TO_RWF).toLocaleString()}`],
+                  ["Max. Deposit", plan.maxUsdt ? `$${plan.maxUsdt} USDT` : "Unlimited"],
                   ["Duration", `${plan.duration} days`],
                 ].map(([label, value]) => (
                   <div key={label} className="flex justify-between">

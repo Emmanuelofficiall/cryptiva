@@ -3,11 +3,13 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 
+const USDT_TO_RWF = 1349;
+
 const plans = [
-  { name: "Starter Plan", rate: "5%", min: "RWF 50,000", duration: "30 days", badge: null },
-  { name: "Bronze Plan", rate: "7%", min: "RWF 100,000", duration: "45 days", badge: "Popular" },
-  { name: "Silver Plan", rate: "10%", min: "RWF 250,000", duration: "60 days", badge: null },
-  { name: "Gold Plan", rate: "12%", min: "RWF 500,000", duration: "90 days", badge: "Best Value" },
+  { name: "Bitcoin", rate: "5%", minUsdt: 37, duration: "30 days", badge: null },
+  { name: "Ethereum", rate: "7%", minUsdt: 74, duration: "45 days", badge: "Popular" },
+  { name: "Solana", rate: "10%", minUsdt: 185, duration: "60 days", badge: null },
+  { name: "Cardano", rate: "12%", minUsdt: 370, duration: "90 days", badge: "Best Value" },
 ];
 
 const PlansSection = () => {
@@ -49,7 +51,11 @@ const PlansSection = () => {
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Min. Deposit</span>
-                  <span className="text-foreground font-medium">{plan.min}</span>
+                  <span className="text-foreground font-medium">${plan.minUsdt} USDT</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">≈ RWF</span>
+                  <span className="text-foreground font-medium">RWF {(plan.minUsdt * USDT_TO_RWF).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Duration</span>
