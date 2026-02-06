@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { DollarSign, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { DollarSign, Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -13,16 +14,41 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [referralCode, setReferralCode] = useState("");
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { signIn, signUp } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: isLogin ? "Welcome back!" : "Account created!",
-      description: isLogin ? "Redirecting to dashboard..." : "Your account has been created successfully.",
-    });
-    setTimeout(() => navigate("/"), 1000);
+    setLoading(true);
+
+    try {
+      if (isLogin) {
+        const { error } = await signIn(email, password);
+        if (error) {
+          toast({ title: "Login failed", description: error.message, variant: "destructive" });
+        } else {
+          toast({ title: "Welcome back!", description: "Redirecting to dashboard..." });
+          navigate("/dashboard");
+        }
+      } else {
+        if (password.length < 6) {
+          toast({ title: "Error", description: "Password must be at least 6 characters", variant: "destructive" });
+          setLoading(false);
+          return;
+        }
+        const { error } = await signUp(email, password, name, referralCode || undefined);
+        if (error) {
+          toast({ title: "Signup failed", description: error.message, variant: "destructive" });
+        } else {
+          toast({ title: "Account created!", description: "You can now sign in." });
+          navigate("/dashboard");
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -126,16 +152,11 @@ const Login = () => {
               </div>
             )}
 
-            <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2 glow-green">
-              {isLogin ? "Sign In" : "Create Account"} <ArrowRight className="w-4 h-4" />
+            <Button type="submit" disabled={loading} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2 glow-green">
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              {isLogin ? "Sign In" : "Create Account"} {!loading && <ArrowRight className="w-4 h-4" />}
             </Button>
           </form>
-
-          {isLogin && (
-            <p className="text-center text-xs text-muted-foreground mt-4">
-              <button className="text-primary hover:underline">Forgot password?</button>
-            </p>
-          )}
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-6">
