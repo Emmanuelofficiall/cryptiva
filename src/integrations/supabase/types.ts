@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      chat_messages: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          message: string
+          sender_name: string | null
+          sender_role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message: string
+          sender_name?: string | null
+          sender_role?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          sender_name?: string | null
+          sender_role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       daily_earnings: {
         Row: {
           amount: number
@@ -133,6 +163,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          preferred_currency: string | null
           referral_code: string | null
           referred_by: string | null
           updated_at: string | null
@@ -144,6 +175,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          preferred_currency?: string | null
           referral_code?: string | null
           referred_by?: string | null
           updated_at?: string | null
@@ -155,6 +187,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          preferred_currency?: string | null
           referral_code?: string | null
           referred_by?: string | null
           updated_at?: string | null
@@ -226,6 +259,42 @@ export type Database = {
         Update: {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_tasks: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          reward: number | null
+          status: string | null
+          task_type: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          reward?: number | null
+          status?: string | null
+          task_type?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          reward?: number | null
+          status?: string | null
+          task_type?: string | null
+          title?: string
           user_id?: string
         }
         Relationships: []

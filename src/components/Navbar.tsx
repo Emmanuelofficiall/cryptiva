@@ -1,20 +1,24 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { DollarSign, BarChart3, Menu, X, LogOut } from "lucide-react";
+import { DollarSign, BarChart3, Menu, X, LogOut, ShieldCheck, ClipboardList } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdminRole } from "@/hooks/useAdminRole";
 
 const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user, signOut } = useAuth();
+  const { isAdmin } = useAdminRole();
 
   const links = [
     { to: "/", label: "Home" },
     { to: "/dashboard", label: "Dashboard" },
     { to: "/plans", label: "Investment Plans" },
+    { to: "/tasks", label: "Tasks" },
     { to: "/referral", label: "Referral" },
+    ...(isAdmin ? [{ to: "/admin", label: "Admin" }] : []),
   ];
 
   const handleSignOut = async () => {
