@@ -10,7 +10,9 @@ import Plans from "./pages/Plans";
 import Referral from "./pages/Referral";
 import UserDashboard from "./pages/UserDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import TasksCenter from "./pages/TasksCenter";
 import NotFound from "./pages/NotFound";
+import LiveChat from "./components/LiveChat";
 
 const queryClient = new QueryClient();
 
@@ -28,8 +30,10 @@ const App = () => (
             <Route path="/referral" element={<Referral />} />
             <Route path="/dashboard" element={<UserDashboard />} />
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/tasks" element={<TasksCenter />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <LiveChat />
         </BrowserRouter>
       </AuthProvider>
     </TooltipProvider>

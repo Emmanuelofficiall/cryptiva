@@ -1,18 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
 import {
   Users, DollarSign, TrendingUp, Activity,
-  CheckCircle, XCircle, Eye, BarChart3, GitBranch, Loader2, ShieldAlert
+  CheckCircle, XCircle, Eye, BarChart3, GitBranch, Loader2, ShieldAlert,
+  MessageCircle, Send
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Navigate } from "react-router-dom";
 
-type Tab = "overview" | "users" | "deposits" | "withdrawals" | "referrals";
+type Tab = "overview" | "users" | "deposits" | "withdrawals" | "referrals" | "chat";
 
 const AdminDashboard = () => {
   const { user, loading: authLoading } = useAuth();
@@ -159,6 +160,7 @@ const AdminDashboard = () => {
     { key: "deposits", label: "Deposits", icon: DollarSign },
     { key: "withdrawals", label: "Withdrawals", icon: Activity },
     { key: "referrals", label: "Referrals", icon: GitBranch },
+    { key: "chat", label: "Chat", icon: MessageCircle },
   ];
 
   return (
@@ -463,6 +465,140 @@ const AdminDashboard = () => {
                 </table>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Chat Tab */}
+        {activeTab === "chat" && <AdminChatPanel />}
+      </div>
+    </div>
+  );
+};
+
+const AdminChatPanel = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [replyMessage, setReplyMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  const { data: chatUsers } = useQuery({
+    queryKey: ["admin-chat-users"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("chat_messages")
+        .select("user_id, sender_name")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      const unique = new Map<string, string>();
+      (data || []).forEach((m) => {
+        if (!unique.has(m.user_id)) unique.set(m.user_id, m.sender_name || m.user_id.slice(0, 8));
+      });
+      return Array.from(unique.entries()).map(([id, name]) => ({ user_id: id, name }));
+    },
+  });
+
+  const { data: messages } = useQuery({
+    queryKey: ["admin-chat-messages", selectedUserId],
+    enabled: !!selectedUserId,
+    refetchInterval: 5000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("chat_messages")
+        .select("*")
+        .eq("user_id", selectedUserId!)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const sendReply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!replyMessage.trim() || !selectedUserId || !user) return;
+    setSending(true);
+    await supabase.from("chat_messages").insert({
+      user_id: selectedUserId,
+      message: replyMessage.trim(),
+      sender_role: "admin",
+      sender_name: "Admin",
+    });
+    setReplyMessage("");
+    setSending(false);
+    queryClient.invalidateQueries({ queryKey: ["admin-chat-messages", selectedUserId] });
+  };
+
+  return (
+    <div className="grid lg:grid-cols-3 gap-6" style={{ minHeight: "500px" }}>
+      {/* User list */}
+      <div className="glass-card overflow-hidden">
+        <div className="p-4 border-b border-border">
+          <h3 className="font-display font-semibold text-foreground text-sm">Conversations</h3>
+        </div>
+        <div className="divide-y divide-border/50 max-h-96 overflow-y-auto">
+          {(chatUsers || []).map((cu) => (
+            <button
+              key={cu.user_id}
+              onClick={() => setSelectedUserId(cu.user_id)}
+              className={`w-full text-left p-4 text-sm transition-colors ${
+                selectedUserId === cu.user_id ? "bg-primary/10 text-foreground" : "text-muted-foreground hover:bg-secondary"
+              }`}
+            >
+              <MessageCircle className="w-4 h-4 inline mr-2" />
+              {cu.name}
+            </button>
+          ))}
+          {(!chatUsers || chatUsers.length === 0) && (
+            <div className="p-6 text-center text-muted-foreground text-sm">No conversations yet</div>
+          )}
+        </div>
+      </div>
+
+      {/* Chat messages */}
+      <div className="lg:col-span-2 glass-card flex flex-col overflow-hidden">
+        {selectedUserId ? (
+          <>
+            <div className="p-4 border-b border-border">
+              <h3 className="font-display font-semibold text-foreground text-sm">
+                Chat with {chatUsers?.find((u) => u.user_id === selectedUserId)?.name}
+              </h3>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 max-h-80">
+              {messages?.map((m) => (
+                <div key={m.id} className={`flex ${m.sender_role === "admin" ? "justify-end" : "justify-start"}`}>
+                  <div className={`max-w-[75%] rounded-xl px-3 py-2 text-sm ${
+                    m.sender_role === "admin" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
+                  }`}>
+                    {m.message}
+                    <p className="text-[10px] opacity-60 mt-1">
+                      {new Date(m.created_at!).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              <div ref={bottomRef} />
+            </div>
+            <form onSubmit={sendReply} className="p-3 border-t border-border flex gap-2">
+              <Input
+                value={replyMessage}
+                onChange={(e) => setReplyMessage(e.target.value)}
+                placeholder="Type a reply..."
+                className="bg-secondary border-border text-foreground text-sm placeholder:text-muted-foreground"
+              />
+              <Button type="submit" size="sm" disabled={sending} className="bg-primary text-primary-foreground shrink-0">
+                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              </Button>
+            </form>
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
+            Select a conversation to view messages
           </div>
         )}
       </div>
