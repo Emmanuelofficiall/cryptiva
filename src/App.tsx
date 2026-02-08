@@ -11,6 +11,7 @@ import Referral from "./pages/Referral";
 import UserDashboard from "./pages/UserDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import TasksCenter from "./pages/TasksCenter";
+import P2P from "./pages/P2P";
 import NotFound from "./pages/NotFound";
 import LiveChat from "./components/LiveChat";
 
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/dashboard" element={<UserDashboard />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/tasks" element={<TasksCenter />} />
+            <Route path="/p2p" element={<P2P />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <LiveChat />

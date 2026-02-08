@@ -157,6 +157,51 @@ export type Database = {
         }
         Relationships: []
       }
+      p2p_orders: {
+        Row: {
+          amount: number
+          created_at: string | null
+          currency: string
+          id: string
+          matched_user_id: string | null
+          order_type: string
+          payment_details: string | null
+          payment_method: string
+          price_per_unit: number
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          currency?: string
+          id?: string
+          matched_user_id?: string | null
+          order_type: string
+          payment_details?: string | null
+          payment_method: string
+          price_per_unit: number
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          currency?: string
+          id?: string
+          matched_user_id?: string | null
+          order_type?: string
+          payment_details?: string | null
+          payment_method?: string
+          price_per_unit?: number
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null

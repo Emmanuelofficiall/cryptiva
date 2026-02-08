@@ -6,49 +6,54 @@
 
 @layer base {
   :root {
-    --background: 0 0% 4%;
-    --foreground: 0 0% 95%;
+    --background: 220 20% 4%;
+    --foreground: 210 20% 95%;
 
-    --card: 0 0% 7%;
-    --card-foreground: 0 0% 95%;
+    --card: 220 20% 7%;
+    --card-foreground: 210 20% 95%;
 
-    --popover: 0 0% 7%;
-    --popover-foreground: 0 0% 95%;
+    --popover: 220 20% 7%;
+    --popover-foreground: 210 20% 95%;
 
     --primary: 160 84% 39%;
     --primary-foreground: 0 0% 2%;
 
-    --secondary: 0 0% 12%;
-    --secondary-foreground: 0 0% 90%;
+    --secondary: 220 15% 12%;
+    --secondary-foreground: 210 15% 90%;
 
-    --muted: 0 0% 12%;
-    --muted-foreground: 0 0% 55%;
+    --muted: 220 15% 12%;
+    --muted-foreground: 210 10% 55%;
 
-    --accent: 160 84% 39%;
+    --accent: 38 92% 50%;
     --accent-foreground: 0 0% 2%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 14%;
-    --input: 0 0% 14%;
+    --border: 220 15% 14%;
+    --input: 220 15% 14%;
     --ring: 160 84% 39%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 0 0% 5%;
-    --sidebar-foreground: 0 0% 90%;
+    --sidebar-background: 220 20% 5%;
+    --sidebar-foreground: 210 15% 90%;
     --sidebar-primary: 160 84% 39%;
     --sidebar-primary-foreground: 0 0% 2%;
-    --sidebar-accent: 0 0% 10%;
-    --sidebar-accent-foreground: 0 0% 90%;
-    --sidebar-border: 0 0% 14%;
+    --sidebar-accent: 220 15% 10%;
+    --sidebar-accent-foreground: 210 15% 90%;
+    --sidebar-border: 220 15% 14%;
     --sidebar-ring: 160 84% 39%;
 
     --success: 142 76% 36%;
     --warning: 38 92% 50%;
     --chart-up: 142 76% 36%;
     --chart-down: 0 72% 51%;
+
+    --gold: 38 92% 50%;
+    --gold-foreground: 0 0% 2%;
+    --cyan: 185 80% 50%;
+    --purple: 270 70% 60%;
   }
 }
 
@@ -69,7 +74,13 @@
 
 @layer utilities {
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-emerald-400;
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(160 84% 39%), hsl(185 80% 50%));
+  }
+
+  .text-gradient-gold {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(38 92% 50%), hsl(45 100% 60%));
   }
 
   .glass-card {
@@ -80,7 +91,18 @@
     box-shadow: 0 0 40px -10px hsl(160 84% 39% / 0.3);
   }
 
+  .glow-gold {
+    box-shadow: 0 0 40px -10px hsl(38 92% 50% / 0.3);
+  }
+
   .hero-gradient {
-    background: radial-gradient(ellipse 80% 50% at 50% -20%, hsl(160 84% 39% / 0.15), transparent);
+    background: 
+      radial-gradient(ellipse 80% 50% at 50% -20%, hsl(160 84% 39% / 0.12), transparent),
+      radial-gradient(ellipse 60% 40% at 80% 50%, hsl(270 70% 60% / 0.06), transparent),
+      radial-gradient(ellipse 60% 40% at 20% 80%, hsl(38 92% 50% / 0.05), transparent);
+  }
+
+  .card-gradient {
+    background: linear-gradient(135deg, hsl(220 20% 7%), hsl(220 20% 10%));
   }
 }

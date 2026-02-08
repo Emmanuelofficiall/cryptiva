@@ -7,20 +7,17 @@ import Footer from "@/components/Footer";
 import { Navigate } from "react-router-dom";
 import {
   Wallet, TrendingUp, ArrowDownCircle, ArrowUpCircle,
-  Copy, Loader2, Smartphone, Bitcoin, Calendar
+  Copy, Loader2, Calendar
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import CurrencySelector from "@/components/CurrencySelector";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from "recharts";
 
 const CRYPTO_ADDRESS = "TGRg61sjXpXeBcUnXmz88YfG2TeMKF9y6n";
-const MOMO_NUMBER = "0789435243";
-const USDT_TO_RWF = 1349;
 
 type DashTab = "overview" | "deposit" | "withdraw" | "earnings";
 
@@ -28,15 +25,11 @@ const UserDashboard = () => {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<DashTab>("overview");
-  const [currency, setCurrency] = useState<"RWF" | "USDT">("RWF");
   const [depositAmount, setDepositAmount] = useState("");
-  const [depositMethod, setDepositMethod] = useState<"crypto" | "momo">("crypto");
   const [depositRef, setDepositRef] = useState("");
-  const [depositCurrency, setDepositCurrency] = useState<"RWF" | "USDT">("USDT");
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [withdrawDest, setWithdrawDest] = useState("");
-  const [withdrawMethod, setWithdrawMethod] = useState("MTN MoMo");
-  const [withdrawCurrency, setWithdrawCurrency] = useState<"RWF" | "USDT">("RWF");
+  const [withdrawMethod, setWithdrawMethod] = useState("TRC20 USDT");
   const [submitting, setSubmitting] = useState(false);
 
   const { data: profile } = useQuery({
@@ -103,10 +96,7 @@ const UserDashboard = () => {
   const activeInvestments = investments?.filter((i) => i.status === "active") || [];
   const totalEarned = investments?.reduce((sum, i) => sum + Number(i.total_earned || 0), 0) || 0;
 
-  const fmt = (rwf: number) => {
-    if (currency === "USDT") return `$${(rwf / USDT_TO_RWF).toFixed(2)} USDT`;
-    return `RWF ${rwf.toLocaleString()}`;
-  };
+  const fmt = (val: number) => `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const earningsChartData = (dailyEarnings || []).slice(-14).map((e) => ({
     day: new Date(e.earned_date!).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
@@ -126,9 +116,9 @@ const UserDashboard = () => {
       const { error } = await supabase.from("deposits").insert({
         user_id: user.id,
         amount: Number(depositAmount),
-        method: depositMethod === "crypto" ? "TRC20 USDT" : "MTN MoMo",
+        method: "TRC20 USDT",
         transaction_ref: depositRef,
-        currency: depositCurrency,
+        currency: "USDT",
       });
       if (error) throw error;
       toast({ title: "Deposit submitted!", description: "Pending admin approval." });
@@ -174,19 +164,16 @@ const UserDashboard = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="pt-20 pb-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-display font-bold text-foreground">
-              Welcome, {profile?.full_name || user.email}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Referral Code: <span className="font-mono text-primary">{profile?.referral_code}</span>
-              <button onClick={() => copyAddress(profile?.referral_code || "")} className="ml-2 text-primary hover:text-primary/80">
-                <Copy className="w-3 h-3 inline" />
-              </button>
-            </p>
-          </div>
-          <CurrencySelector currency={currency} onChange={setCurrency} />
+        <div className="mb-8">
+          <h1 className="text-2xl font-display font-bold text-foreground">
+            Welcome, {profile?.full_name || user.email}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Referral Code: <span className="font-mono text-primary">{profile?.referral_code}</span>
+            <button onClick={() => copyAddress(profile?.referral_code || "")} className="ml-2 text-primary hover:text-primary/80">
+              <Copy className="w-3 h-3 inline" />
+            </button>
+          </p>
         </div>
 
         {/* Tabs */}
@@ -211,7 +198,7 @@ const UserDashboard = () => {
         {activeTab === "overview" && (
           <div>
             <div className="grid sm:grid-cols-3 gap-6 mb-8">
-              <div className="glass-card p-6">
+              <div className="glass-card p-6 glow-green">
                 <div className="flex items-center gap-3 mb-3">
                   <Wallet className="w-5 h-5 text-primary" />
                   <span className="text-sm text-muted-foreground">Wallet Balance</span>
@@ -220,17 +207,17 @@ const UserDashboard = () => {
               </div>
               <div className="glass-card p-6">
                 <div className="flex items-center gap-3 mb-3">
-                  <TrendingUp className="w-5 h-5 text-primary" />
+                  <TrendingUp className="w-5 h-5 text-accent" />
                   <span className="text-sm text-muted-foreground">Active Investments</span>
                 </div>
                 <p className="text-3xl font-display font-bold text-foreground">{activeInvestments.length}</p>
               </div>
-              <div className="glass-card p-6">
+              <div className="glass-card p-6 glow-gold">
                 <div className="flex items-center gap-3 mb-3">
-                  <ArrowUpCircle className="w-5 h-5 text-primary" />
+                  <ArrowUpCircle className="w-5 h-5 text-accent" />
                   <span className="text-sm text-muted-foreground">Total Earned</span>
                 </div>
-                <p className="text-3xl font-display font-bold text-primary">{fmt(totalEarned)}</p>
+                <p className="text-3xl font-display font-bold text-gradient-gold">{fmt(totalEarned)}</p>
               </div>
             </div>
 
@@ -278,11 +265,11 @@ const UserDashboard = () => {
                           <p className="text-xs text-muted-foreground">{new Date(d.created_at!).toLocaleDateString()}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-semibold text-foreground">{d.currency} {Number(d.amount).toLocaleString()}</p>
+                          <p className="text-sm font-semibold text-foreground">${Number(d.amount).toLocaleString()} USDT</p>
                           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                             d.status === "approved" ? "bg-primary/10 text-primary" :
                             d.status === "rejected" ? "bg-destructive/10 text-destructive" :
-                            "bg-warning/10 text-warning"
+                            "bg-accent/10 text-accent"
                           }`}>{d.status}</span>
                         </div>
                       </div>
@@ -306,11 +293,11 @@ const UserDashboard = () => {
                           <p className="text-xs text-muted-foreground">{new Date(w.created_at!).toLocaleDateString()}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-semibold text-foreground">RWF {Number(w.amount).toLocaleString()}</p>
+                          <p className="text-sm font-semibold text-foreground">${Number(w.amount).toLocaleString()} USDT</p>
                           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                             w.status === "approved" ? "bg-primary/10 text-primary" :
                             w.status === "rejected" ? "bg-destructive/10 text-destructive" :
-                            "bg-warning/10 text-warning"
+                            "bg-accent/10 text-accent"
                           }`}>{w.status}</span>
                         </div>
                       </div>
@@ -337,10 +324,10 @@ const UserDashboard = () => {
                           <stop offset="95%" stopColor="hsl(160, 84%, 39%)" stopOpacity={0} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(0, 0%, 14%)" />
-                      <XAxis dataKey="day" stroke="hsl(0, 0%, 55%)" fontSize={12} />
-                      <YAxis stroke="hsl(0, 0%, 55%)" fontSize={12} />
-                      <Tooltip contentStyle={{ backgroundColor: "hsl(0, 0%, 7%)", border: "1px solid hsl(0, 0%, 14%)", borderRadius: "8px", color: "hsl(0, 0%, 95%)" }} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 15%, 14%)" />
+                      <XAxis dataKey="day" stroke="hsl(210, 10%, 55%)" fontSize={12} />
+                      <YAxis stroke="hsl(210, 10%, 55%)" fontSize={12} />
+                      <Tooltip contentStyle={{ backgroundColor: "hsl(220, 20%, 7%)", border: "1px solid hsl(220, 15%, 14%)", borderRadius: "8px", color: "hsl(210, 20%, 95%)" }} />
                       <Area type="monotone" dataKey="amount" stroke="hsl(160, 84%, 39%)" fillOpacity={1} fill="url(#colorEarnings)" strokeWidth={2} />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -350,7 +337,6 @@ const UserDashboard = () => {
               )}
             </div>
 
-            {/* Earnings list */}
             <div className="glass-card overflow-hidden">
               <div className="p-5 border-b border-border">
                 <h3 className="font-display font-semibold text-foreground">Earnings Log</h3>
@@ -378,51 +364,26 @@ const UserDashboard = () => {
         {activeTab === "deposit" && (
           <div className="max-w-lg">
             <div className="glass-card p-6 mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-display font-semibold text-foreground">Deposit Funds</h3>
-                <CurrencySelector currency={depositCurrency} onChange={(c) => {
-                  setDepositCurrency(c);
-                  setDepositMethod(c === "USDT" ? "crypto" : "momo");
-                }} />
+              <h3 className="font-display font-semibold text-foreground mb-4">Deposit USDT</h3>
+              <div className="bg-secondary rounded-xl p-4 mb-6">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">TRC20 USDT Address</p>
+                <div className="flex items-center gap-2">
+                  <code className="text-sm text-foreground font-mono break-all flex-1">{CRYPTO_ADDRESS}</code>
+                  <Button size="sm" variant="outline" onClick={() => copyAddress(CRYPTO_ADDRESS)} className="border-border hover:bg-primary hover:text-primary-foreground shrink-0">
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-destructive mt-2">⚠ Only send USDT via TRC20 network</p>
               </div>
-
-              {depositCurrency === "USDT" ? (
-                <div className="bg-secondary rounded-xl p-4 mb-6">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">TRC20 USDT Address</p>
-                  <div className="flex items-center gap-2">
-                    <code className="text-sm text-foreground font-mono break-all flex-1">{CRYPTO_ADDRESS}</code>
-                    <Button size="sm" variant="outline" onClick={() => copyAddress(CRYPTO_ADDRESS)} className="border-border hover:bg-primary hover:text-primary-foreground shrink-0">
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  <p className="text-xs text-destructive mt-2">⚠ Only send USDT via TRC20 network</p>
-                </div>
-              ) : (
-                <div className="bg-secondary rounded-xl p-4 mb-6">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Mobile Money Number</p>
-                  <div className="flex items-center gap-2">
-                    <code className="text-lg text-foreground font-mono font-bold">{MOMO_NUMBER}</code>
-                    <Button size="sm" variant="outline" onClick={() => copyAddress(MOMO_NUMBER)} className="border-border hover:bg-primary hover:text-primary-foreground">
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">Send to this number then fill the form below</p>
-                </div>
-              )}
 
               <form onSubmit={handleDeposit} className="space-y-4">
                 <div>
-                  <Label className="text-foreground text-sm">Amount ({depositCurrency})</Label>
-                  <Input type="number" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} placeholder="Enter amount" className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground" required />
-                  {depositAmount && Number(depositAmount) > 0 && (
-                    <p className="text-xs text-primary mt-1">
-                      ≈ {depositCurrency === "USDT" ? `RWF ${(Number(depositAmount) * USDT_TO_RWF).toLocaleString()}` : `$${(Number(depositAmount) / USDT_TO_RWF).toFixed(2)} USDT`}
-                    </p>
-                  )}
+                  <Label className="text-foreground text-sm">Amount (USDT)</Label>
+                  <Input type="number" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} placeholder="Enter amount in USDT" className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground" required />
                 </div>
                 <div>
                   <Label className="text-foreground text-sm">Transaction Reference / ID</Label>
-                  <Input value={depositRef} onChange={(e) => setDepositRef(e.target.value)} placeholder="Enter transaction ID or reference" className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground" required />
+                  <Input value={depositRef} onChange={(e) => setDepositRef(e.target.value)} placeholder="Enter transaction ID or hash" className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground" required />
                 </div>
                 <Button type="submit" disabled={submitting} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 glow-green">
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
@@ -437,46 +398,25 @@ const UserDashboard = () => {
         {activeTab === "withdraw" && (
           <div className="max-w-lg">
             <div className="glass-card p-6">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-display font-semibold text-foreground">Withdraw Funds</h3>
-                <CurrencySelector currency={withdrawCurrency} onChange={(c) => {
-                  setWithdrawCurrency(c);
-                  setWithdrawMethod(c === "USDT" ? "TRC20 USDT" : "MTN MoMo");
-                }} />
-              </div>
+              <h3 className="font-display font-semibold text-foreground mb-2">Withdraw USDT</h3>
               <p className="text-sm text-muted-foreground mb-6">
                 Available: <span className="text-primary font-semibold">{fmt(walletBalance)}</span>
               </p>
 
               <form onSubmit={handleWithdraw} className="space-y-4">
                 <div>
-                  <Label className="text-foreground text-sm">Amount ({withdrawCurrency})</Label>
+                  <Label className="text-foreground text-sm">Amount (USDT)</Label>
                   <Input type="number" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} placeholder="Enter amount" className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground" required />
-                  {withdrawAmount && Number(withdrawAmount) > 0 && (
-                    <p className="text-xs text-primary mt-1">
-                      ≈ {withdrawCurrency === "RWF" ? `$${(Number(withdrawAmount) / USDT_TO_RWF).toFixed(2)} USDT` : `RWF ${(Number(withdrawAmount) * USDT_TO_RWF).toLocaleString()}`}
-                    </p>
-                  )}
                 </div>
                 <div>
                   <Label className="text-foreground text-sm">Withdrawal Method</Label>
                   <select value={withdrawMethod} onChange={(e) => setWithdrawMethod(e.target.value)} className="mt-1.5 w-full rounded-lg bg-secondary border border-border text-foreground p-2.5 text-sm">
-                    {withdrawCurrency === "RWF" ? (
-                      <>
-                        <option value="MTN MoMo">MTN MoMo</option>
-                        <option value="Airtel Money">Airtel Money</option>
-                        <option value="Bank Transfer">Bank Transfer</option>
-                      </>
-                    ) : (
-                      <option value="TRC20 USDT">TRC20 USDT</option>
-                    )}
+                    <option value="TRC20 USDT">TRC20 USDT</option>
                   </select>
                 </div>
                 <div>
-                  <Label className="text-foreground text-sm">
-                    {withdrawMethod === "TRC20 USDT" ? "Wallet Address" : "Phone Number / Account"}
-                  </Label>
-                  <Input value={withdrawDest} onChange={(e) => setWithdrawDest(e.target.value)} placeholder={withdrawMethod === "TRC20 USDT" ? "TRC20 address" : "07xxxxxxxx"} className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground" required />
+                  <Label className="text-foreground text-sm">TRC20 Wallet Address</Label>
+                  <Input value={withdrawDest} onChange={(e) => setWithdrawDest(e.target.value)} placeholder="Your TRC20 address" className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground" required />
                 </div>
                 <Button type="submit" disabled={submitting} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 glow-green">
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
