@@ -2,12 +2,12 @@ import { Bitcoin, Wallet, ArrowLeftRight, Users, ShieldCheck, Headphones } from 
 import { motion } from "framer-motion";
 
 const services = [
-  { icon: Bitcoin, title: "Crypto Investment", desc: "Invest in top cryptocurrency plans including Bitcoin, Ethereum, Solana, and more with daily returns." },
-  { icon: Wallet, title: "Secure Wallet", desc: "Manage your funds with our built-in wallet supporting both USDT and RWF currencies." },
-  { icon: ArrowLeftRight, title: "Easy Deposits & Withdrawals", desc: "Deposit via TRC20 USDT or Mobile Money. Withdraw to MoMo, Airtel, bank, or crypto wallet." },
-  { icon: Users, title: "3-Level Referral Program", desc: "Earn 5%, 3%, and 1% commissions across three levels by inviting friends to invest." },
-  { icon: ShieldCheck, title: "Admin-Verified Transactions", desc: "Every deposit and withdrawal is manually verified by our admin team for maximum security." },
-  { icon: Headphones, title: "24/7 Support", desc: "Get help anytime with our dedicated support team ready to assist you with any questions." },
+  { icon: Bitcoin, title: "Crypto Investment", desc: "Invest in top cryptocurrency plans including Bitcoin, Ethereum, Solana, and more with daily USDT returns." },
+  { icon: Wallet, title: "USDT Wallet", desc: "Manage your funds with our built-in wallet. All transactions in USDT for simplicity." },
+  { icon: ArrowLeftRight, title: "P2P Trading", desc: "Buy and sell USDT peer-to-peer with other traders directly on the platform." },
+  { icon: Users, title: "3-Level Referral Program", desc: "Earn 5%, 3%, and 1% USDT commissions across three levels by inviting friends." },
+  { icon: ShieldCheck, title: "Admin-Verified Transactions", desc: "Every deposit and withdrawal is manually verified by our admin team for security." },
+  { icon: Headphones, title: "24/7 Live Support", desc: "Get help anytime with our real-time live chat support available around the clock." },
 ];
 
 const ServicesSection = () => {
@@ -15,7 +15,7 @@ const ServicesSection = () => {
     <section id="services" className="py-24 bg-card/30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <p className="text-sm text-primary font-semibold uppercase tracking-wider mb-3">Our Services</p>
+          <p className="text-sm text-accent font-semibold uppercase tracking-wider mb-3">Our Services</p>
           <h2 className="text-3xl sm:text-4xl font-display font-bold text-foreground">
             What We <span className="text-gradient">Offer</span>
           </h2>

@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { DollarSign, BarChart3, Menu, X, LogOut, ShieldCheck, ClipboardList } from "lucide-react";
+import { DollarSign, BarChart3, Menu, X, LogOut, ArrowUpDown } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,11 +14,11 @@ const Navbar = () => {
 
   const links = [
     { to: "/", label: "Home" },
-    { to: "/dashboard", label: "Dashboard" },
-    { to: "/plans", label: "Investment Plans" },
+    { to: isAdmin ? "/admin" : "/dashboard", label: "Dashboard" },
+    { to: "/plans", label: "Plans" },
+    { to: "/p2p", label: "P2P" },
     { to: "/tasks", label: "Tasks" },
     { to: "/referral", label: "Referral" },
-    ...(isAdmin ? [{ to: "/admin", label: "Admin" }] : []),
   ];
 
   const handleSignOut = async () => {
@@ -56,10 +56,10 @@ const Navbar = () => {
           <div className="hidden md:flex items-center gap-3">
             {user ? (
               <>
-                <Link to="/dashboard">
+                <Link to={isAdmin ? "/admin" : "/dashboard"}>
                   <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2">
                     <BarChart3 className="w-4 h-4" />
-                    My Dashboard
+                    Dashboard
                   </Button>
                 </Link>
                 <Button size="sm" variant="ghost" onClick={handleSignOut} className="text-muted-foreground hover:text-foreground gap-2">

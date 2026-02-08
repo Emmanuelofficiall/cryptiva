@@ -1,4 +1,4 @@
-import { ArrowRight, TrendingUp } from "lucide-react";
+import { ArrowRight, TrendingUp, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -13,8 +13,8 @@ const HeroSection = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7 }}
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border/50 bg-card/50 mb-8">
-              <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-primary/30 bg-primary/5 mb-8">
+              <Zap className="w-3 h-3 text-accent" />
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Trusted by 10,000+ Investors
               </span>
@@ -29,18 +29,18 @@ const HeroSection = () => {
             </h1>
 
             <p className="text-lg text-muted-foreground max-w-lg mb-8 leading-relaxed">
-              Start your financial freedom journey with daily returns, flexible currency options, and secure Mobile Money deposits.
+              Start your financial freedom journey with daily USDT returns, P2P trading, and secure crypto deposits.
             </p>
 
-            <div className="glass-card p-4 inline-flex items-center gap-4 mb-8">
+            <div className="glass-card p-4 inline-flex items-center gap-4 mb-8 glow-green">
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                 <TrendingUp className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Live Exchange Rate</p>
-                <p className="text-sm font-mono font-semibold text-foreground">1 USD = 1,349 RWF</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Platform Currency</p>
+                <p className="text-sm font-mono font-semibold text-foreground">USDT (TRC20)</p>
               </div>
-              <span className="text-xs text-primary font-semibold ml-2">+0.2%</span>
+              <span className="text-xs text-primary font-semibold ml-2 bg-primary/10 px-2 py-1 rounded-full">Live</span>
             </div>
 
             <div className="flex flex-wrap gap-4 mb-12">
@@ -49,9 +49,9 @@ const HeroSection = () => {
                   Start Investing <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
-              <Link to="/dashboard">
-                <Button size="lg" variant="outline" className="border-border text-foreground hover:bg-secondary">
-                  View Dashboard
+              <Link to="/p2p">
+                <Button size="lg" variant="outline" className="border-accent/50 text-accent hover:bg-accent hover:text-accent-foreground gap-2">
+                  P2P Trading <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
             </div>
@@ -59,7 +59,7 @@ const HeroSection = () => {
             <div className="flex gap-10">
               {[
                 { value: "10,000+", label: "Active Users" },
-                { value: "RWF 2.5B", label: "Total Invested" },
+                { value: "$2.5M+", label: "Total Invested" },
                 { value: "12%", label: "Avg. Daily Return" },
               ].map((stat) => (
                 <div key={stat.label}>
@@ -91,6 +91,10 @@ const HeroSection = () => {
                   <p className="text-xs text-muted-foreground uppercase">Daily Returns</p>
                   <p className="text-lg font-bold text-primary">+8.5%</p>
                 </div>
+              </div>
+              <div className="absolute top-8 left-0 glass-card p-3 flex items-center gap-2 glow-gold">
+                <Zap className="w-4 h-4 text-accent" />
+                <span className="text-sm font-semibold text-accent">P2P Active</span>
               </div>
             </div>
           </motion.div>

@@ -11,8 +11,6 @@ import { ArrowRight, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 
-const USDT_TO_RWF = 1349;
-
 const allPlans = [
   { name: "Bitcoin", rate: 5, minUsdt: 37, maxUsdt: 73, duration: 30, badge: null },
   { name: "Ethereum", rate: 7, minUsdt: 74, maxUsdt: 184, duration: 45, badge: "Popular" },
@@ -47,18 +45,17 @@ const Plans = () => {
     try {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + selectedPlan.duration);
-      const rwfAmount = amountUsdt * USDT_TO_RWF;
 
       const { error } = await supabase.from("investments").insert({
         user_id: user.id,
         plan_name: selectedPlan.name,
-        amount: rwfAmount,
+        amount: amountUsdt,
         daily_rate: selectedPlan.rate,
         duration_days: selectedPlan.duration,
         expires_at: expiresAt.toISOString(),
       });
       if (error) throw error;
-      toast({ title: "Investment Created!", description: `You've invested $${amountUsdt} USDT (≈ RWF ${rwfAmount.toLocaleString()}) in the ${selectedPlan.name} plan.` });
+      toast({ title: "Investment Created!", description: `You've invested $${amountUsdt} USDT in the ${selectedPlan.name} plan.` });
       setSelectedPlan(null);
       setInvestAmount("");
       navigate("/dashboard");
@@ -74,12 +71,12 @@ const Plans = () => {
       <Navbar />
       <div className="pt-24 pb-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <p className="text-sm text-primary font-semibold uppercase tracking-wider mb-3">Investment Plans</p>
+          <p className="text-sm text-accent font-semibold uppercase tracking-wider mb-3">Investment Plans</p>
           <h1 className="text-3xl sm:text-4xl font-display font-bold text-foreground">
             Choose Your <span className="text-gradient">Growth Path</span>
           </h1>
           <p className="text-muted-foreground mt-4 max-w-lg mx-auto">
-            Select from 6 crypto-powered plans. Amounts shown in USDT &amp; RWF.
+            Select from 6 crypto-powered plans. All amounts in USDT.
           </p>
         </div>
 
@@ -109,11 +106,6 @@ const Plans = () => {
                   <p className="text-xs text-muted-foreground mt-1">
                     Range: ${selectedPlan.minUsdt} – {selectedPlan.maxUsdt ? `$${selectedPlan.maxUsdt}` : "Unlimited"} USDT
                   </p>
-                  {investAmount && Number(investAmount) > 0 && (
-                    <p className="text-xs text-primary mt-1">
-                      ≈ RWF {(Number(investAmount) * USDT_TO_RWF).toLocaleString()}
-                    </p>
-                  )}
                 </div>
                 <div className="flex gap-3">
                   <Button type="submit" disabled={submitting} className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 glow-green">
@@ -139,7 +131,9 @@ const Plans = () => {
               className="glass-card p-6 relative hover:border-primary/30 transition-all"
             >
               {plan.badge && (
-                <span className="absolute top-4 right-4 text-xs font-semibold bg-primary/10 text-primary px-3 py-1 rounded-full">
+                <span className={`absolute top-4 right-4 text-xs font-semibold px-3 py-1 rounded-full ${
+                  plan.badge === "VIP" ? "bg-accent/10 text-accent" : "bg-primary/10 text-primary"
+                }`}>
                   {plan.badge}
                 </span>
               )}
@@ -149,7 +143,6 @@ const Plans = () => {
               <div className="space-y-3 mb-6 text-sm">
                 {[
                   ["Min. Deposit", `$${plan.minUsdt} USDT`],
-                  ["≈ RWF", `RWF ${(plan.minUsdt * USDT_TO_RWF).toLocaleString()}`],
                   ["Max. Deposit", plan.maxUsdt ? `$${plan.maxUsdt} USDT` : "Unlimited"],
                   ["Duration", `${plan.duration} days`],
                 ].map(([label, value]) => (

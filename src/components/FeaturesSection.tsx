@@ -1,13 +1,13 @@
-import { BarChart3, RefreshCw, TrendingUp, Smartphone, Shield, UserCheck } from "lucide-react";
+import { BarChart3, ArrowUpDown, TrendingUp, Shield, UserCheck, Zap } from "lucide-react";
 import { motion } from "framer-motion";
 
 const features = [
-  { icon: BarChart3, title: "Multiple Investment Plans", desc: "Choose from 6 tailored plans designed for different risk levels and financial goals." },
-  { icon: RefreshCw, title: "Currency Exchange", desc: "Seamlessly convert between RWF and USD inside your dashboard with live rates." },
-  { icon: TrendingUp, title: "Daily Returns", desc: "Earn consistent daily profits automatically credited to your wallet balance." },
-  { icon: Smartphone, title: "Mobile Money Integration", desc: "Deposit and withdraw using MTN, Airtel, or other popular Rwandan mobile payment services." },
-  { icon: Shield, title: "Bank-Level Security", desc: "Your funds are protected with 256-bit encryption and multi-factor authentication." },
-  { icon: UserCheck, title: "Admin Verified", desc: "Every transaction is manually reviewed and approved by our trusted admin team." },
+  { icon: BarChart3, title: "Multiple Investment Plans", desc: "Choose from 6 crypto-powered plans with daily USDT returns up to 18%." },
+  { icon: ArrowUpDown, title: "P2P Trading", desc: "Buy and sell USDT directly with other traders. Fast, secure, and commission-free." },
+  { icon: TrendingUp, title: "Daily Returns", desc: "Earn consistent daily profits in USDT automatically credited to your wallet." },
+  { icon: Zap, title: "Instant Deposits", desc: "Deposit USDT via TRC20 network. Fast confirmations and secure transactions." },
+  { icon: Shield, title: "Bank-Level Security", desc: "Your funds are protected with 256-bit encryption and verified transactions." },
+  { icon: UserCheck, title: "Admin Verified", desc: "Every transaction is manually reviewed and approved by our trusted team." },
 ];
 
 const FeaturesSection = () => {
@@ -15,7 +15,7 @@ const FeaturesSection = () => {
     <section className="py-24 bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <p className="text-sm text-primary font-semibold uppercase tracking-wider mb-3">Why Choose Cryptiva</p>
+          <p className="text-sm text-accent font-semibold uppercase tracking-wider mb-3">Why Choose Cryptiva</p>
           <h2 className="text-3xl sm:text-4xl font-display font-bold text-foreground">
             Everything You Need to <span className="text-gradient">Grow Your Wealth</span>
           </h2>
