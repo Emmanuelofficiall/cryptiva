@@ -71,9 +71,21 @@ const AdminDashboard = () => {
   };
 
   const handleWithdrawal = async (id: string, action: "approved" | "rejected") => {
+    const withdrawal = allWithdrawals?.find(w => w.id === id);
     const { error } = await supabase.from("withdrawals").update({ status: action, reviewed_at: new Date().toISOString() }).eq("id", id);
-    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
-    else { toast({ title: action === "approved" ? "Withdrawal Approved" : "Withdrawal Rejected" }); refetchWithdrawals(); }
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    
+    // Refund wallet balance when rejected (balance was already deducted on request)
+    if (action === "rejected" && withdrawal) {
+      const { data: profile } = await supabase.from("profiles").select("wallet_balance").eq("user_id", withdrawal.user_id).maybeSingle();
+      if (profile) {
+        const refundAmount = Number(withdrawal.amount) + 1; // amount + $1 fee
+        await supabase.from("profiles").update({ wallet_balance: Number(profile.wallet_balance || 0) + refundAmount }).eq("user_id", withdrawal.user_id);
+      }
+    }
+    
+    toast({ title: action === "approved" ? "Withdrawal Approved ✅" : "Withdrawal Rejected & Refunded" });
+    refetchWithdrawals();
   };
 
   const stats = [

@@ -153,14 +153,24 @@ const UserDashboard = () => {
     }
     setSubmitting(true);
     try {
+      // Deduct wallet balance immediately (amount + fee)
+      const totalDeduction = amt + WITHDRAWAL_FEE;
+      const { error: balError } = await supabase.from("profiles").update({ wallet_balance: walletBalance - totalDeduction }).eq("user_id", user.id);
+      if (balError) throw balError;
+
       const { error } = await supabase.from("withdrawals").insert({
         user_id: user.id,
         amount: amt,
         method: withdrawMethod,
         destination: withdrawDest,
       });
-      if (error) throw error;
-      toast({ title: "Withdrawal requested!", description: `$${amt} USDT (+ $${WITHDRAWAL_FEE} fee) pending admin approval.` });
+      if (error) {
+        // Rollback balance if insert fails
+        await supabase.from("profiles").update({ wallet_balance: walletBalance }).eq("user_id", user.id);
+        throw error;
+      }
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      toast({ title: "Withdrawal requested!", description: `$${amt} USDT (+ $${WITHDRAWAL_FEE} fee) deducted. Pending admin approval.` });
       setWithdrawAmount("");
       setWithdrawDest("");
     } catch (err: any) {
