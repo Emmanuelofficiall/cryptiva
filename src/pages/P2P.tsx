@@ -48,6 +48,7 @@ const P2P = () => {
   const [transferEmail, setTransferEmail] = useState("");
   const [transferAmount, setTransferAmount] = useState("");
   const [transferNote, setTransferNote] = useState("");
+  const [showConfirm, setShowConfirm] = useState<{ type: "buy" | "sell"; amount: string } | null>(null);
 
   const { data: currencies } = useQuery({
     queryKey: ["p2p-currencies"],
@@ -578,10 +579,10 @@ const P2P = () => {
 
               {/* Show only Buy form when user wants to buy */}
               {selectedOrderType === "buy" && (
-                <form onSubmit={handleBuy} className="space-y-4">
+                <div className="space-y-4">
                   <div>
                     <Label className="text-foreground text-sm">Buy Amount (USDT)</Label>
-                    <Input type="number" value={buyAmount} onChange={(e) => setBuyAmount(e.target.value)} placeholder="e.g. 50" className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground" required min="1" />
+                    <Input type="number" value={buyAmount} onChange={(e) => setBuyAmount(e.target.value)} placeholder="e.g. 50" className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground" min="1" />
                     {buyAmount && (
                       <div className="mt-2 bg-primary/10 rounded-lg p-3">
                         <p className="text-sm font-semibold text-primary">Amount to send: {selectedCurrency} {(Number(buyAmount) * getPrice()).toLocaleString()}</p>
@@ -589,18 +590,18 @@ const P2P = () => {
                       </div>
                     )}
                   </div>
-                  <Button type="submit" disabled={submitting} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 glow-green">
-                    {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <ShoppingCart className="w-4 h-4 mr-2" />}Buy USDT
+                  <Button onClick={() => { if (buyAmount) setShowConfirm({ type: "buy", amount: buyAmount }); }} disabled={!buyAmount} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 glow-green">
+                    <ShoppingCart className="w-4 h-4 mr-2" />Buy USDT
                   </Button>
-                </form>
+                </div>
               )}
 
               {/* Show only Sell form when user wants to sell */}
               {selectedOrderType === "sell" && (
-                <form onSubmit={handleSell} className="space-y-4">
+                <div className="space-y-4">
                   <div>
                     <Label className="text-foreground text-sm">Sell Amount (USDT)</Label>
-                    <Input type="number" value={sellAmount} onChange={(e) => setSellAmount(e.target.value)} placeholder="e.g. 50" className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground" required min="1" />
+                    <Input type="number" value={sellAmount} onChange={(e) => setSellAmount(e.target.value)} placeholder="e.g. 50" className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground" min="1" />
                     {sellAmount && (
                       <div className="mt-2 bg-accent/10 rounded-lg p-3">
                         <p className="text-sm font-semibold text-accent">You'll receive: {selectedCurrency} {(Number(sellAmount) * getPrice()).toLocaleString()}</p>
@@ -608,10 +609,10 @@ const P2P = () => {
                       </div>
                     )}
                   </div>
-                  <Button type="submit" disabled={submitting} className="w-full bg-accent text-accent-foreground hover:bg-accent/90 glow-gold">
-                    {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Tag className="w-4 h-4 mr-2" />}Sell USDT
+                  <Button onClick={() => { if (sellAmount) setShowConfirm({ type: "sell", amount: sellAmount }); }} disabled={!sellAmount} className="w-full bg-accent text-accent-foreground hover:bg-accent/90 glow-gold">
+                    <Tag className="w-4 h-4 mr-2" />Sell USDT
                   </Button>
-                </form>
+                </div>
               )}
             </div>
           </div>
@@ -1190,6 +1191,58 @@ const P2P = () => {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Confirmation Dialog */}
+        {showConfirm && selectedMerchant && (
+          <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-card p-6 max-w-sm w-full">
+              <h3 className="text-lg font-display font-bold text-foreground mb-4 flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-primary" /> Confirm {showConfirm.type === "buy" ? "Buy" : "Sell"} Order
+              </h3>
+              <div className="space-y-3 mb-6">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Type</span>
+                  <span className={`font-semibold ${showConfirm.type === "buy" ? "text-primary" : "text-accent"}`}>{showConfirm.type.toUpperCase()}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Amount</span>
+                  <span className="text-foreground font-semibold">{Number(showConfirm.amount).toLocaleString()} USDT</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Rate</span>
+                  <span className="text-foreground">{selectedCurrency} {getPrice().toLocaleString()}/USDT</span>
+                </div>
+                <div className="flex justify-between text-sm border-t border-border pt-2">
+                  <span className="text-muted-foreground font-semibold">{showConfirm.type === "buy" ? "You pay" : "You receive"}</span>
+                  <span className="text-foreground font-bold">{selectedCurrency} {(Number(showConfirm.amount) * getPrice()).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Merchant</span>
+                  <span className="text-foreground">{selectedMerchant.display_name}</span>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={() => setShowConfirm(null)} className="flex-1 border-border text-foreground">Cancel</Button>
+                <Button
+                  disabled={submitting}
+                  onClick={async () => {
+                    const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+                    if (showConfirm.type === "buy") {
+                      await handleBuy(fakeEvent);
+                    } else {
+                      await handleSell(fakeEvent);
+                    }
+                    setShowConfirm(null);
+                  }}
+                  className={`flex-1 ${showConfirm.type === "buy" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-accent text-accent-foreground hover:bg-accent/90"}`}
+                >
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Confirm {showConfirm.type === "buy" ? "Buy" : "Sell"}
+                </Button>
+              </div>
+            </motion.div>
           </div>
         )}
 
