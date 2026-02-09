@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 
-type Tab = "buy" | "sell" | "my-orders" | "payment-methods";
+type Tab = "buy" | "sell" | "my-orders" | "payment-methods" | "merchant-orders";
 
 const P2P = () => {
   const { user, loading: authLoading } = useAuth();
@@ -27,6 +27,9 @@ const P2P = () => {
   const [sellAmount, setSellAmount] = useState("");
   const [selectedCurrency, setSelectedCurrency] = useState("RWF");
   const [submitting, setSubmitting] = useState(false);
+  // Merchant order form
+  const [merchantOrderType, setMerchantOrderType] = useState<"buy" | "sell">("buy");
+  const [merchantOrderAmount, setMerchantOrderAmount] = useState("");
   // Payment method form
   const [showAddPM, setShowAddPM] = useState(false);
   const [pmName, setPmName] = useState("");
@@ -219,9 +222,35 @@ const P2P = () => {
     toast({ title: "Removed" });
   };
 
+  const handleMerchantOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!merchantOrderAmount) return;
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from("p2p_orders").insert({
+        user_id: user.id,
+        order_type: merchantOrderType,
+        amount: Number(merchantOrderAmount),
+        price_per_unit: getPrice(),
+        payment_method: selectedCurrency,
+        local_currency: selectedCurrency,
+        status: "open",
+      });
+      if (error) throw error;
+      toast({ title: "Order created!", description: `Your ${merchantOrderType} order for ${merchantOrderAmount} USDT is now live.` });
+      setMerchantOrderAmount("");
+      qc.invalidateQueries({ queryKey: ["my-p2p-orders"] });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
     { key: "buy", label: "Buy USDT", icon: ShoppingCart },
     { key: "sell", label: "Sell USDT", icon: Tag },
+    ...(isMerchant ? [{ key: "merchant-orders" as Tab, label: "Create Order", icon: Plus }] : []),
     { key: "my-orders", label: "My Orders", icon: Wallet },
     { key: "payment-methods", label: "Payment Methods", icon: CreditCard },
   ];
@@ -271,9 +300,13 @@ const P2P = () => {
                     className="glass-card p-5 hover:border-primary/40 transition-all cursor-pointer group"
                     onClick={() => setSelectedMerchant(m)}>
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                        <Shield className="w-5 h-5 text-primary" />
-                      </div>
+                      {m.photo_url ? (
+                        <img src={m.photo_url} alt={m.display_name} className="w-10 h-10 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                          <Shield className="w-5 h-5 text-primary" />
+                        </div>
+                      )}
                       <div>
                         <p className="font-semibold text-foreground">{m.display_name}</p>
                         <p className="text-xs text-primary">Verified Merchant</p>
@@ -297,9 +330,13 @@ const P2P = () => {
         {tab === "buy" && selectedMerchant && (
           <div className="max-w-lg mx-auto">
             <div className="glass-card p-6 glow-green">
-              <div className="flex items-center justify-between mb-6">
+               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center"><Shield className="w-5 h-5 text-primary" /></div>
+                  {selectedMerchant.photo_url ? (
+                    <img src={selectedMerchant.photo_url} alt={selectedMerchant.display_name} className="w-10 h-10 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center"><Shield className="w-5 h-5 text-primary" /></div>
+                  )}
                   <div>
                     <p className="font-semibold text-foreground">{selectedMerchant.display_name}</p>
                     <p className="text-xs text-primary">Verified Merchant</p>
@@ -347,9 +384,13 @@ const P2P = () => {
                     className="glass-card p-5 hover:border-accent/40 transition-all cursor-pointer group"
                     onClick={() => setSelectedMerchant(m)}>
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center">
-                        <Shield className="w-5 h-5 text-accent" />
-                      </div>
+                      {m.photo_url ? (
+                        <img src={m.photo_url} alt={m.display_name} className="w-10 h-10 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center">
+                          <Shield className="w-5 h-5 text-accent" />
+                        </div>
+                      )}
                       <div>
                         <p className="font-semibold text-foreground">{m.display_name}</p>
                         <p className="text-xs text-accent">Verified Merchant</p>
@@ -374,7 +415,11 @@ const P2P = () => {
             <div className="glass-card p-6 glow-gold">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center"><Shield className="w-5 h-5 text-accent" /></div>
+                  {selectedMerchant.photo_url ? (
+                    <img src={selectedMerchant.photo_url} alt={selectedMerchant.display_name} className="w-10 h-10 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center"><Shield className="w-5 h-5 text-accent" /></div>
+                  )}
                   <div>
                     <p className="font-semibold text-foreground">{selectedMerchant.display_name}</p>
                     <p className="text-xs text-accent">Verified Merchant</p>
@@ -390,6 +435,48 @@ const P2P = () => {
                 </div>
                 <Button type="submit" disabled={submitting} className="w-full bg-accent text-accent-foreground hover:bg-accent/90 glow-gold">
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}Sell USDT
+                </Button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* MERCHANT CREATE ORDER TAB */}
+        {tab === "merchant-orders" && isMerchant && (
+          <div className="max-w-lg mx-auto">
+            <div className="glass-card p-6 glow-green">
+              <h3 className="font-display font-semibold text-foreground mb-6 flex items-center gap-2">
+                <Shield className="w-5 h-5 text-primary" /> Create P2P Order
+              </h3>
+              <div className="flex gap-2 mb-6">
+                <Button
+                  type="button"
+                  onClick={() => setMerchantOrderType("buy")}
+                  className={`flex-1 ${merchantOrderType === "buy" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
+                >
+                  <ShoppingCart className="w-4 h-4 mr-2" /> Buy Order
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => setMerchantOrderType("sell")}
+                  className={`flex-1 ${merchantOrderType === "sell" ? "bg-accent text-accent-foreground" : "bg-secondary text-muted-foreground"}`}
+                >
+                  <Tag className="w-4 h-4 mr-2" /> Sell Order
+                </Button>
+              </div>
+              <form onSubmit={handleMerchantOrder} className="space-y-4">
+                <div>
+                  <Label className="text-foreground text-sm">Amount (USDT)</Label>
+                  <Input type="number" value={merchantOrderAmount} onChange={(e) => setMerchantOrderAmount(e.target.value)} placeholder="e.g. 100" className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground" required min="1" />
+                  {merchantOrderAmount && (
+                    <p className="text-xs text-primary mt-1">
+                      {selectedCurrency} value: {(Number(merchantOrderAmount) * getPrice()).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+                <Button type="submit" disabled={submitting} className={`w-full ${merchantOrderType === "buy" ? "bg-primary text-primary-foreground hover:bg-primary/90 glow-green" : "bg-accent text-accent-foreground hover:bg-accent/90 glow-gold"}`}>
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Create {merchantOrderType === "buy" ? "Buy" : "Sell"} Order
                 </Button>
               </form>
             </div>

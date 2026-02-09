@@ -268,6 +268,7 @@ const MerchantsPanel = ({ profiles, merchants, refetch }: { profiles: any[]; mer
   const [selectedUserId, setSelectedUserId] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState<string | null>(null);
 
   const addMerchant = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -283,6 +284,27 @@ const MerchantsPanel = ({ profiles, merchants, refetch }: { profiles: any[]; mer
     await supabase.from("merchants").delete().eq("id", id);
     toast({ title: "Merchant removed" });
     refetch();
+  };
+
+  const handlePhotoUpload = async (merchantId: string, file: File) => {
+    setUploadingPhoto(merchantId);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${merchantId}.${ext}`;
+      // Remove old photo if exists
+      await supabase.storage.from("merchant-photos").remove([path]);
+      const { error: uploadError } = await supabase.storage.from("merchant-photos").upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from("merchant-photos").getPublicUrl(path);
+      const { error: updateError } = await supabase.from("merchants").update({ photo_url: urlData.publicUrl }).eq("id", merchantId);
+      if (updateError) throw updateError;
+      toast({ title: "Photo uploaded!" });
+      refetch();
+    } catch (err: any) {
+      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    } finally {
+      setUploadingPhoto(null);
+    }
   };
 
   const nonMerchantProfiles = profiles.filter(p => !merchants.some(m => m.user_id === p.user_id));
@@ -313,13 +335,31 @@ const MerchantsPanel = ({ profiles, merchants, refetch }: { profiles: any[]; mer
             {merchants.map((m) => (
               <div key={m.id} className="p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Shield className="w-5 h-5 text-primary" />
+                  {m.photo_url ? (
+                    <img src={m.photo_url} alt={m.display_name} className="w-10 h-10 rounded-full object-cover" />
+                  ) : (
+                    <Shield className="w-5 h-5 text-primary" />
+                  )}
                   <div>
                     <p className="text-sm font-medium text-foreground">{m.display_name}</p>
                     <p className="text-xs text-muted-foreground">{m.user_id.slice(0, 8)}...</p>
                   </div>
                 </div>
-                <Button size="sm" variant="outline" onClick={() => removeMerchant(m.id)} className="border-destructive text-destructive h-8 text-xs"><Trash2 className="w-3 h-3 mr-1" />Remove</Button>
+                <div className="flex items-center gap-2">
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(m.id, f); }}
+                    />
+                    <span className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+                      {uploadingPhoto === m.id ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                      {m.photo_url ? "Change Photo" : "Upload Photo"}
+                    </span>
+                  </label>
+                  <Button size="sm" variant="outline" onClick={() => removeMerchant(m.id)} className="border-destructive text-destructive h-8 text-xs"><Trash2 className="w-3 h-3 mr-1" />Remove</Button>
+                </div>
               </div>
             ))}
           </div>
