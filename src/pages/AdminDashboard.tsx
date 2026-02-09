@@ -53,9 +53,21 @@ const AdminDashboard = () => {
   const getProfileName = (userId: string) => { const p = allProfiles?.find(p => p.user_id === userId); return p?.full_name || p?.email || userId.slice(0, 8); };
 
   const handleDeposit = async (id: string, action: "approved" | "rejected") => {
+    const deposit = allDeposits?.find(d => d.id === id);
     const { error } = await supabase.from("deposits").update({ status: action, reviewed_at: new Date().toISOString() }).eq("id", id);
-    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
-    else { toast({ title: action === "approved" ? "Deposit Approved" : "Deposit Rejected" }); refetchDeposits(); }
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    
+    // Credit wallet balance when approved
+    if (action === "approved" && deposit) {
+      const { data: profile } = await supabase.from("profiles").select("wallet_balance").eq("user_id", deposit.user_id).maybeSingle();
+      if (profile) {
+        const newBalance = Number(profile.wallet_balance || 0) + Number(deposit.amount);
+        await supabase.from("profiles").update({ wallet_balance: newBalance }).eq("user_id", deposit.user_id);
+      }
+    }
+    
+    toast({ title: action === "approved" ? "Deposit Approved ✅" : "Deposit Rejected", description: action === "approved" ? `$${deposit?.amount} credited to user's wallet.` : undefined });
+    refetchDeposits();
   };
 
   const handleWithdrawal = async (id: string, action: "approved" | "rejected") => {
