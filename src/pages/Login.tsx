@@ -106,7 +106,7 @@ const Login = () => {
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Jean-Claude Mugabo"
+                  placeholder="Henry Johnson"
                   className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground"
                   required
                 />
