@@ -4,31 +4,24 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Navigate } from "react-router-dom";
-import { CheckCircle, Clock, Star, Loader2, Gift, RefreshCw } from "lucide-react";
+import { CheckCircle, Clock, Loader2, Gift, ArrowUpDown, TrendingUp, TrendingDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
-const dailyTasks = [
-  { title: "Daily login bonus", description: "Log in to claim your daily reward", reward: 0.1 },
-  { title: "Watch a tutorial", description: "Watch an investment tutorial video", reward: 0.05 },
-  { title: "Check your portfolio", description: "Review your active investments", reward: 0.05 },
-  { title: "Visit P2P marketplace", description: "Browse the P2P trading section", reward: 0.05 },
-  { title: "Share on social media", description: "Share Cryptiva with your network", reward: 0.1 },
-];
-
-const oneTimeTasks = [
-  { title: "Complete your profile", description: "Add your full name and details", reward: 0.5 },
-  { title: "Make your first deposit", description: "Deposit any amount to get started", reward: 1 },
-  { title: "Refer a friend", description: "Share your referral code with someone", reward: 2 },
-  { title: "Invest in a plan", description: "Choose and invest in any plan", reward: 1.5 },
-  { title: "Add payment method", description: "Add a payment method for P2P trading", reward: 0.5 },
+const exchanges = [
+  { name: "BTC/USDT", icon: "₿", buy: 67842.50, sell: 67838.20, reward: 0.08 },
+  { name: "ETH/USDT", icon: "Ξ", buy: 3456.10, sell: 3454.80, reward: 0.06 },
+  { name: "BNB/USDT", icon: "◆", buy: 612.35, sell: 611.90, reward: 0.05 },
+  { name: "SOL/USDT", icon: "◎", buy: 178.22, sell: 178.05, reward: 0.05 },
+  { name: "XRP/USDT", icon: "✕", buy: 2.34, sell: 2.33, reward: 0.04 },
 ];
 
 const TasksCenter = () => {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [claimedExchanges, setClaimedExchanges] = useState<Set<string>>(new Set());
 
   const { data: tasks, isLoading: tasksLoading } = useQuery({
     queryKey: ["user-tasks", user?.id],
@@ -44,89 +37,86 @@ const TasksCenter = () => {
     },
   });
 
-  // Auto-initialize tasks + reset daily tasks each day
+  // Load today's claimed exchanges
+  useEffect(() => {
+    if (!tasks) return;
+    const today = new Date().toISOString().split("T")[0];
+    const claimed = new Set<string>();
+    tasks.forEach((t) => {
+      if (
+        t.task_type === "exchange" &&
+        t.status === "completed" &&
+        t.completed_at?.split("T")[0] === today
+      ) {
+        claimed.add(t.title);
+      }
+    });
+    setClaimedExchanges(claimed);
+  }, [tasks]);
+
+  // Auto-initialize exchange tasks
   useEffect(() => {
     if (!user || tasksLoading || tasks === undefined) return;
 
-    const initAndResetTasks = async () => {
+    const init = async () => {
       const today = new Date().toISOString().split("T")[0];
+      const exchangeTasks = tasks.filter((t) => t.task_type === "exchange");
 
-      if (tasks.length === 0) {
-        // First time: create all tasks
-        const inserts = [
-          ...dailyTasks.map((t) => ({
-            user_id: user.id,
-            title: t.title,
-            description: t.description,
-            reward: t.reward,
-            task_type: "daily",
-            status: "pending",
-          })),
-          ...oneTimeTasks.map((t) => ({
-            user_id: user.id,
-            title: t.title,
-            description: t.description,
-            reward: t.reward,
-            task_type: "one_time",
-            status: "pending",
-          })),
-        ];
-        await supabase.from("user_tasks").insert(inserts);
+      // Reset yesterday's exchange tasks
+      const toReset = exchangeTasks.filter(
+        (t) => t.status === "completed" && t.completed_at && t.completed_at.split("T")[0] !== today
+      );
+      if (toReset.length > 0) {
+        for (const task of toReset) {
+          await supabase.from("user_tasks").update({ status: "pending", completed_at: null }).eq("id", task.id);
+        }
         queryClient.invalidateQueries({ queryKey: ["user-tasks", user.id] });
         return;
       }
 
-      // Reset completed daily tasks from previous days
-      const dailyCompleted = tasks.filter(
-        (t) =>
-          t.task_type === "daily" &&
-          t.status === "completed" &&
-          t.completed_at &&
-          t.completed_at.split("T")[0] !== today
-      );
-
-      if (dailyCompleted.length > 0) {
-        for (const task of dailyCompleted) {
-          await supabase
-            .from("user_tasks")
-            .update({ status: "pending", completed_at: null })
-            .eq("id", task.id);
-        }
+      // Create exchange tasks if none exist
+      if (exchangeTasks.length === 0) {
+        const inserts = exchanges.map((e) => ({
+          user_id: user.id,
+          title: e.name,
+          description: `Trade ${e.name} to earn daily reward`,
+          reward: e.reward,
+          task_type: "exchange",
+          status: "pending",
+        }));
+        await supabase.from("user_tasks").insert(inserts);
         queryClient.invalidateQueries({ queryKey: ["user-tasks", user.id] });
       }
     };
 
-    initAndResetTasks();
+    init();
   }, [user, tasks, tasksLoading, queryClient]);
 
-  const completeTask = async (taskId: string, reward: number) => {
-    // Mark task completed
+  const claimExchange = async (exchangeName: string, action: "buy" | "sell") => {
+    if (claimedExchanges.has(exchangeName)) return;
+
+    const task = tasks?.find((t) => t.task_type === "exchange" && t.title === exchangeName && t.status === "pending");
+    if (!task) return;
+
+    const reward = Number(task.reward);
+
     const { error } = await supabase
       .from("user_tasks")
-      .update({ status: "completed", completed_at: new Date().toISOString() })
-      .eq("id", taskId);
+      .update({ status: "completed", completed_at: new Date().toISOString(), description: `${action.toUpperCase()} ${exchangeName}` })
+      .eq("id", task.id);
 
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
       return;
     }
 
-    // Credit reward to wallet
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("wallet_balance")
-      .eq("user_id", user!.id)
-      .single();
-
+    const { data: profile } = await supabase.from("profiles").select("wallet_balance").eq("user_id", user!.id).single();
     if (profile) {
-      const newBalance = Number(profile.wallet_balance || 0) + reward;
-      await supabase
-        .from("profiles")
-        .update({ wallet_balance: newBalance })
-        .eq("user_id", user!.id);
+      await supabase.from("profiles").update({ wallet_balance: Number(profile.wallet_balance || 0) + reward }).eq("user_id", user!.id);
     }
 
-    toast({ title: "Task Completed! 🎉", description: `$${reward.toFixed(2)} USDT credited to your wallet.` });
+    setClaimedExchanges((prev) => new Set(prev).add(exchangeName));
+    toast({ title: `${action === "buy" ? "Bought" : "Sold"} ${exchangeName} ✅`, description: `+$${reward.toFixed(2)} USDT credited to your wallet.` });
     queryClient.invalidateQueries({ queryKey: ["user-tasks", user?.id] });
     queryClient.invalidateQueries({ queryKey: ["profile"] });
   };
@@ -141,55 +131,9 @@ const TasksCenter = () => {
 
   if (!user) return <Navigate to="/login" />;
 
-  const daily = tasks?.filter((t) => t.task_type === "daily") || [];
-  const oneTime = tasks?.filter((t) => t.task_type === "one_time") || [];
-  const pendingDaily = daily.filter((t) => t.status === "pending");
-  const completedDaily = daily.filter((t) => t.status === "completed");
-  const pendingOneTime = oneTime.filter((t) => t.status === "pending");
-  const completedOneTime = oneTime.filter((t) => t.status === "completed");
-  const allCompleted = [...completedDaily, ...completedOneTime];
-  const totalRewards = allCompleted.reduce((s, t) => s + Number(t.reward || 0), 0);
-
-  const TaskCard = ({ task, showClaim = true }: { task: any; showClaim?: boolean }) => (
-    <div
-      key={task.id}
-      className={`glass-card p-4 flex items-center justify-between ${task.status === "completed" ? "opacity-60" : ""}`}
-    >
-      <div className="flex items-center gap-3">
-        <div
-          className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-            task.status === "completed" ? "bg-primary/10" : "bg-accent/10"
-          }`}
-        >
-          {task.status === "completed" ? (
-            <CheckCircle className="w-5 h-5 text-primary" />
-          ) : (
-            <Clock className="w-5 h-5 text-accent" />
-          )}
-        </div>
-        <div>
-          <p className={`text-sm font-medium text-foreground ${task.status === "completed" ? "line-through" : ""}`}>
-            {task.title}
-          </p>
-          <p className="text-xs text-muted-foreground">{task.description}</p>
-        </div>
-      </div>
-      <div className="flex items-center gap-3">
-        <span className={`text-xs font-semibold ${task.status === "completed" ? "text-primary" : "text-accent"}`}>
-          +${Number(task.reward).toFixed(2)}
-        </span>
-        {showClaim && task.status === "pending" && (
-          <Button
-            size="sm"
-            onClick={() => completeTask(task.id, Number(task.reward))}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs"
-          >
-            Claim
-          </Button>
-        )}
-      </div>
-    </div>
-  );
+  const exchangeTasks = tasks?.filter((t) => t.task_type === "exchange") || [];
+  const completedToday = exchangeTasks.filter((t) => t.status === "completed").length;
+  const totalEarned = tasks?.filter((t) => t.status === "completed").reduce((s, t) => s + Number(t.reward || 0), 0) || 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -198,71 +142,96 @@ const TasksCenter = () => {
         <div className="text-center mb-12">
           <p className="text-sm text-accent font-semibold uppercase tracking-wider mb-3">Tasks Center</p>
           <h1 className="text-3xl sm:text-4xl font-display font-bold text-foreground">
-            Complete Tasks, <span className="text-gradient">Earn Daily Income</span>
+            Trade & <span className="text-gradient">Earn Daily</span>
           </h1>
           <p className="text-muted-foreground mt-4 max-w-lg mx-auto">
-            Complete daily tasks every day to earn USDT rewards directly to your wallet.
+            Click Buy or Sell on each exchange pair daily to earn USDT income.
           </p>
         </div>
 
         <div className="grid grid-cols-3 gap-4 mb-8">
           <div className="glass-card p-5 text-center">
-            <Clock className="w-6 h-6 text-accent mx-auto mb-2" />
-            <p className="text-2xl font-display font-bold text-foreground">{pendingDaily.length + pendingOneTime.length}</p>
-            <p className="text-xs text-muted-foreground">Pending</p>
+            <ArrowUpDown className="w-6 h-6 text-accent mx-auto mb-2" />
+            <p className="text-2xl font-display font-bold text-foreground">{exchanges.length - completedToday}</p>
+            <p className="text-xs text-muted-foreground">Remaining</p>
           </div>
           <div className="glass-card p-5 text-center">
             <CheckCircle className="w-6 h-6 text-primary mx-auto mb-2" />
-            <p className="text-2xl font-display font-bold text-foreground">{allCompleted.length}</p>
-            <p className="text-xs text-muted-foreground">Completed</p>
+            <p className="text-2xl font-display font-bold text-foreground">{completedToday}/{exchanges.length}</p>
+            <p className="text-xs text-muted-foreground">Completed Today</p>
           </div>
           <div className="glass-card p-5 text-center glow-gold">
             <Gift className="w-6 h-6 text-accent mx-auto mb-2" />
-            <p className="text-2xl font-display font-bold text-gradient-gold">${totalRewards.toFixed(2)}</p>
+            <p className="text-2xl font-display font-bold text-gradient-gold">${totalEarned.toFixed(2)}</p>
             <p className="text-xs text-muted-foreground">Total Earned</p>
           </div>
         </div>
 
-        {/* Daily Tasks */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <RefreshCw className="w-5 h-5 text-accent" />
-            <h2 className="text-lg font-display font-semibold text-foreground">Daily Tasks</h2>
-            <span className="text-xs text-muted-foreground ml-2">(Resets every day)</span>
-          </div>
+        {/* Exchange Pairs */}
+        <div className="mb-4">
+          <h2 className="text-lg font-display font-semibold text-foreground mb-4">Daily Exchange Tasks</h2>
           <div className="space-y-3">
-            {daily.map((task) => (
-              <TaskCard key={task.id} task={task} />
-            ))}
+            {exchanges.map((ex) => {
+              const claimed = claimedExchanges.has(ex.name);
+              return (
+                <div
+                  key={ex.name}
+                  className={`glass-card p-4 flex items-center justify-between ${claimed ? "opacity-60" : ""}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center shrink-0 text-xl font-bold text-accent">
+                      {ex.icon}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{ex.name}</p>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="text-xs text-muted-foreground">
+                          Buy: <span className="text-green-400 font-medium">${ex.buy.toLocaleString()}</span>
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          Sell: <span className="text-red-400 font-medium">${ex.sell.toLocaleString()}</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-accent mr-1">+${ex.reward.toFixed(2)}</span>
+                    {claimed ? (
+                      <span className="flex items-center gap-1 text-xs text-primary font-semibold">
+                        <CheckCircle className="w-4 h-4" /> Done
+                      </span>
+                    ) : (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() => claimExchange(ex.name, "buy")}
+                          className="bg-green-600 hover:bg-green-700 text-white text-xs gap-1 h-8"
+                        >
+                          <TrendingUp className="w-3 h-3" /> Buy
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => claimExchange(ex.name, "sell")}
+                          className="bg-red-600 hover:bg-red-700 text-white text-xs gap-1 h-8"
+                        >
+                          <TrendingDown className="w-3 h-3" /> Sell
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* One-Time Tasks */}
-        {pendingOneTime.length > 0 && (
-          <div className="mb-8">
-            <div className="flex items-center gap-2 mb-4">
-              <Star className="w-5 h-5 text-accent" />
-              <h2 className="text-lg font-display font-semibold text-foreground">One-Time Tasks</h2>
-            </div>
-            <div className="space-y-3">
-              {pendingOneTime.map((task) => (
-                <TaskCard key={task.id} task={task} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Completed One-Time */}
-        {completedOneTime.length > 0 && (
-          <div>
-            <h2 className="text-lg font-display font-semibold text-foreground mb-4">Completed One-Time Tasks</h2>
-            <div className="space-y-3">
-              {completedOneTime.map((task) => (
-                <TaskCard key={task.id} task={task} showClaim={false} />
-              ))}
-            </div>
-          </div>
-        )}
+        <div className="glass-card p-4 mt-6 text-center">
+          <p className="text-xs text-muted-foreground">
+            <Clock className="w-3 h-3 inline mr-1" />
+            Tasks reset daily at midnight. Complete all 5 to earn up to <span className="text-accent font-semibold">${exchanges.reduce((s, e) => s + e.reward, 0).toFixed(2)} USDT/day</span>.
+          </p>
+        </div>
       </div>
       <Footer />
     </div>
