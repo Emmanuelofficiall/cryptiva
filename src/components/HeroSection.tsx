@@ -2,6 +2,9 @@ import { ArrowRight, TrendingUp, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
+import CandlestickChart from "@/components/CandlestickChart";
+
+const miniCharts = ["BTC/USDT", "ETH/USDT", "SOL/USDT"];
 
 const HeroSection = () => {
   return (
@@ -76,26 +79,22 @@ const HeroSection = () => {
             transition={{ duration: 0.7, delay: 0.2 }}
             className="hidden lg:block relative"
           >
-            <div className="relative">
-              <div className="absolute -inset-4 bg-primary/5 rounded-3xl blur-3xl" />
-              <img
-                src="https://images.unsplash.com/photo-1663000805908-1106cf7ad001?w=600&h=700&fit=crop"
-                alt="Mobile banking on smartphone"
-                className="relative rounded-2xl w-full max-w-md mx-auto shadow-2xl"
-              />
-              <div className="absolute bottom-8 right-0 glass-card p-4 flex items-center gap-3 glow-green">
-                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase">Daily Returns</p>
-                  <p className="text-lg font-bold text-primary">+8.5%</p>
-                </div>
-              </div>
-              <div className="absolute top-8 left-0 glass-card p-3 flex items-center gap-2 glow-gold">
-                <Zap className="w-4 h-4 text-accent" />
-                <span className="text-sm font-semibold text-accent">P2P Active</span>
-              </div>
+            <div className="space-y-4">
+              {miniCharts.map((pair, i) => (
+                <motion.div
+                  key={pair}
+                  initial={{ opacity: 0, x: 30 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 + i * 0.15 }}
+                  className="glass-card p-4"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-foreground">{pair}</span>
+                    <span className="text-xs text-primary font-semibold bg-primary/10 px-2 py-0.5 rounded-full">Live</span>
+                  </div>
+                  <CandlestickChart pair={pair} height={100} showLabels />
+                </motion.div>
+              ))}
             </div>
           </motion.div>
         </div>
