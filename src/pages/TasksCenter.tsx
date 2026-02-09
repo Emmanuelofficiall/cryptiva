@@ -130,10 +130,29 @@ const TasksCenter = () => {
       await supabase.from("profiles").update({ wallet_balance: Number(profile.wallet_balance || 0) + reward }).eq("user_id", user!.id);
     }
 
-    setClaimedExchanges((prev) => new Set(prev).add(exchangeName));
-    toast({ title: `${action === "buy" ? "Bought" : "Sold"} ${exchangeName} ✅`, description: `+$${reward.toFixed(2)} USDT credited to your wallet.` });
+    const newClaimed = new Set(claimedExchanges).add(exchangeName);
+    setClaimedExchanges(newClaimed);
+
+    // Check if all exchanges are now claimed — record daily earning
+    if (newClaimed.size === exchanges.length) {
+      await supabase.from("daily_earnings").insert({
+        user_id: user!.id,
+        amount: totalDailyIncome,
+        investment_id: activeInvestments[0]?.id || null,
+      });
+      // Update total_earned on investments
+      for (const inv of activeInvestments) {
+        const invReward = (Number(inv.amount) * Number(inv.daily_rate) / 100);
+        await supabase.from("investments").update({ total_earned: Number(inv.total_earned || 0) + invReward }).eq("id", inv.id);
+      }
+      toast({ title: "🎉 All tasks completed!", description: `Daily income of $${totalDailyIncome.toFixed(2)} USDT has been credited!` });
+    } else {
+      toast({ title: `${action === "buy" ? "Bought" : "Sold"} ${exchangeName} ✅`, description: `+$${reward.toFixed(2)} USDT credited to your wallet.` });
+    }
+
     queryClient.invalidateQueries({ queryKey: ["user-tasks", user?.id] });
     queryClient.invalidateQueries({ queryKey: ["profile"] });
+    queryClient.invalidateQueries({ queryKey: ["daily-earnings"] });
   };
 
   if (authLoading) {
@@ -166,7 +185,7 @@ const TasksCenter = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-8">
           <div className="glass-card p-5 text-center">
             <Clock className="w-6 h-6 text-accent mx-auto mb-2" />
             <p className="text-2xl font-display font-bold text-foreground">{exchanges.length - completedToday}</p>

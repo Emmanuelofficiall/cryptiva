@@ -6,15 +6,16 @@ import Navbar from "@/components/Navbar";
 import {
   Users, DollarSign, TrendingUp, Activity,
   CheckCircle, XCircle, BarChart3, GitBranch, Loader2, ShieldAlert,
-  MessageCircle, Send, Shield, Settings, Plus, Trash2
+  MessageCircle, Send, Shield, Settings, Plus, Trash2, ArrowLeftRight
 } from "lucide-react";
+import AdminP2PPanel from "@/components/AdminP2PPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Navigate } from "react-router-dom";
 
-type Tab = "overview" | "users" | "deposits" | "withdrawals" | "referrals" | "chat" | "merchants" | "p2p-settings";
+type Tab = "overview" | "users" | "deposits" | "withdrawals" | "referrals" | "chat" | "merchants" | "p2p-settings" | "p2p-orders";
 
 const AdminDashboard = () => {
   const { user, loading: authLoading } = useAuth();
@@ -78,6 +79,7 @@ const AdminDashboard = () => {
     { key: "referrals", label: "Referrals", icon: GitBranch },
     { key: "merchants", label: "Merchants", icon: Shield },
     { key: "p2p-settings", label: "P2P Prices", icon: Settings },
+    { key: "p2p-orders", label: "P2P Orders", icon: ArrowLeftRight },
     { key: "chat", label: "Chat", icon: MessageCircle },
   ];
 
@@ -90,11 +92,11 @@ const AdminDashboard = () => {
           <p className="text-sm text-muted-foreground">Manage users, deposits, withdrawals, merchants, and P2P settings.</p>
         </div>
 
-        <div className="flex gap-1 mb-8 bg-secondary rounded-xl p-1 w-fit overflow-x-auto">
+        <div className="flex gap-1 mb-8 bg-secondary rounded-xl p-1 w-full sm:w-fit overflow-x-auto scrollbar-hide">
           {tabs.map((tab) => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${activeTab === tab.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-              <tab.icon className="w-4 h-4" />{tab.label}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${activeTab === tab.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+              <tab.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />{tab.label}
             </button>
           ))}
         </div>
@@ -256,6 +258,7 @@ const AdminDashboard = () => {
 
         {activeTab === "merchants" && <MerchantsPanel profiles={allProfiles || []} merchants={merchants || []} refetch={refetchMerchants} />}
         {activeTab === "p2p-settings" && <P2PSettingsPanel settings={p2pSettings || []} refetch={refetchP2P} />}
+        {activeTab === "p2p-orders" && <AdminP2PPanel profiles={allProfiles || []} />}
         {activeTab === "chat" && <AdminChatPanel />}
       </div>
     </div>
