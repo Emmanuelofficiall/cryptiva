@@ -12,15 +12,16 @@ const Navbar = () => {
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdminRole();
 
-  const links = [
-    { to: "/", label: "Home" },
-    { to: "/dashboard", label: "Dashboard" },
-    { to: "/plans", label: "Plans" },
-    { to: "/p2p", label: "P2P" },
-    { to: "/tasks", label: "Tasks" },
-    { to: "/referral", label: "Referral" },
-    ...(isAdmin ? [{ to: "/admin", label: "Admin" }] : []),
-  ];
+  const links = user
+    ? [
+        { to: "/dashboard", label: "Dashboard" },
+        { to: "/plans", label: "Plans" },
+        { to: "/p2p", label: "P2P" },
+        { to: "/tasks", label: "Tasks" },
+        { to: "/referral", label: "Referral" },
+        ...(isAdmin ? [{ to: "/admin", label: "Admin" }] : []),
+      ]
+    : [{ to: "/", label: "Home" }];
 
   const handleSignOut = async () => {
     await signOut();
