@@ -191,12 +191,12 @@ const UserDashboard = () => {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-8 bg-secondary rounded-xl p-1 w-fit overflow-x-auto">
+        <div className="flex gap-1 mb-8 bg-secondary rounded-xl p-1 w-full sm:w-fit overflow-x-auto scrollbar-hide">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+              className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                 activeTab === tab.key
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground"
@@ -211,7 +211,7 @@ const UserDashboard = () => {
         {/* Overview Tab */}
         {activeTab === "overview" && (
           <div>
-            <div className="grid sm:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-8">
               <div className="glass-card p-6 glow-green">
                 <div className="flex items-center gap-3 mb-3">
                   <Wallet className="w-5 h-5 text-primary" />
@@ -263,7 +263,7 @@ const UserDashboard = () => {
             </div>
 
             {/* Recent Transactions */}
-            <div className="grid lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               <div className="glass-card overflow-hidden">
                 <div className="p-5 border-b border-border">
                   <h3 className="font-display font-semibold text-foreground">Recent Deposits</h3>
