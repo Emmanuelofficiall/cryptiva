@@ -380,6 +380,10 @@ const P2PSettingsPanel = ({ settings, refetch }: { settings: any[]; refetch: () 
   const [editSellPrice, setEditSellPrice] = useState("");
 
   const updatePrices = async (id: string) => {
+    if (Number(editBuyPrice) >= Number(editSellPrice)) {
+      toast({ title: "Invalid prices", description: "Buy price must be less than sell price.", variant: "destructive" });
+      return;
+    }
     const { error } = await supabase.from("p2p_settings").update({
       buy_price: Number(editBuyPrice),
       sell_price: Number(editSellPrice),
