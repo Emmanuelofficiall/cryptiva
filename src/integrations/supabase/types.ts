@@ -115,6 +115,33 @@ export type Database = {
         }
         Relationships: []
       }
+      internal_transfers: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          note: string | null
+          recipient_user_id: string
+          sender_user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          note?: string | null
+          recipient_user_id: string
+          sender_user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          note?: string | null
+          recipient_user_id?: string
+          sender_user_id?: string
+        }
+        Relationships: []
+      }
       investments: {
         Row: {
           amount: number
@@ -183,6 +210,53 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      p2p_disputes: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          order_id: string
+          reason: string
+          reporter_user_id: string
+          resolution: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          order_id: string
+          reason: string
+          reporter_user_id: string
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          order_id?: string
+          reason?: string
+          reporter_user_id?: string
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "p2p_disputes_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "p2p_orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       p2p_orders: {
         Row: {
