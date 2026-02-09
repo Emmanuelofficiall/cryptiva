@@ -308,23 +308,29 @@ export type Database = {
       }
       p2p_settings: {
         Row: {
+          buy_price: number
           currency: string
           id: string
           is_active: boolean
+          sell_price: number
           updated_at: string | null
           usdt_price: number
         }
         Insert: {
+          buy_price?: number
           currency: string
           id?: string
           is_active?: boolean
+          sell_price?: number
           updated_at?: string | null
           usdt_price: number
         }
         Update: {
+          buy_price?: number
           currency?: string
           id?: string
           is_active?: boolean
+          sell_price?: number
           updated_at?: string | null
           usdt_price?: number
         }
