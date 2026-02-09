@@ -165,6 +165,14 @@ const Login = () => {
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
               {isLogin ? "Sign In" : "Create Account"} {!loading && <ArrowRight className="w-4 h-4" />}
             </Button>
+
+            {isLogin && (
+              <p className="text-center">
+                <Link to="/reset-password" className="text-xs text-primary hover:underline">
+                  Forgot your password?
+                </Link>
+              </p>
+            )}
           </form>
         </div>
 

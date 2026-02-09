@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Navigate } from "react-router-dom";
 import {
   Wallet, TrendingUp, ArrowDownCircle, ArrowUpCircle,
-  Copy, Loader2, Calendar
+  Copy, Loader2, Calendar, User
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,11 +19,12 @@ import {
 
 const CRYPTO_ADDRESS = "TGRg61sjXpXeBcUnXmz88YfG2TeMKF9y6n";
 
-type DashTab = "overview" | "deposit" | "withdraw" | "earnings";
+type DashTab = "overview" | "deposit" | "withdraw" | "earnings" | "profile";
 
 const UserDashboard = () => {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<DashTab>("overview");
   const [depositAmount, setDepositAmount] = useState("");
   
@@ -31,6 +32,8 @@ const UserDashboard = () => {
   const [withdrawDest, setWithdrawDest] = useState("");
   const [withdrawMethod, setWithdrawMethod] = useState("TRC20 USDT");
   const [submitting, setSubmitting] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editingProfile, setEditingProfile] = useState(false);
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],
@@ -172,6 +175,7 @@ const UserDashboard = () => {
     { key: "earnings", label: "Earnings", icon: TrendingUp },
     { key: "deposit", label: "Deposit", icon: ArrowDownCircle },
     { key: "withdraw", label: "Withdraw", icon: ArrowUpCircle },
+    { key: "profile", label: "Profile", icon: User },
   ];
 
   return (
@@ -433,6 +437,83 @@ const UserDashboard = () => {
                 <Button type="submit" disabled={submitting} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 glow-green">
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                   Request Withdrawal
+                </Button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Profile Tab */}
+        {activeTab === "profile" && (
+          <div className="max-w-lg">
+            <div className="glass-card p-6 mb-6">
+              <h3 className="font-display font-semibold text-foreground mb-6">Your Profile</h3>
+              
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="w-8 h-8 text-primary" />
+                </div>
+                <div>
+                  <p className="text-lg font-semibold text-foreground">{profile?.full_name || "—"}</p>
+                  <p className="text-sm text-muted-foreground">{user.email}</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-secondary rounded-xl p-4">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Referral Code</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-mono text-primary">{profile?.referral_code}</span>
+                    <button onClick={() => copyAddress(profile?.referral_code || "")} className="text-primary hover:text-primary/80">
+                      <Copy className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-secondary rounded-xl p-4">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Preferred Currency</p>
+                  <span className="text-sm font-semibold text-foreground">{profile?.preferred_currency || "RWF"}</span>
+                </div>
+
+                <div className="bg-secondary rounded-xl p-4">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Member Since</p>
+                  <span className="text-sm text-foreground">{profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : "—"}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Edit Name */}
+            <div className="glass-card p-6">
+              <h3 className="font-display font-semibold text-foreground mb-4">Edit Profile</h3>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                if (!editName.trim()) return;
+                setEditingProfile(true);
+                try {
+                  const { error } = await supabase.from("profiles").update({ full_name: editName }).eq("user_id", user.id);
+                  if (error) throw error;
+                  toast({ title: "Profile updated!", description: "Your name has been changed." });
+                  queryClient.invalidateQueries({ queryKey: ["profile"] });
+                  setEditName("");
+                } catch (err: any) {
+                  toast({ title: "Error", description: err.message, variant: "destructive" });
+                } finally {
+                  setEditingProfile(false);
+                }
+              }} className="space-y-4">
+                <div>
+                  <Label className="text-foreground text-sm">Full Name</Label>
+                  <Input
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    placeholder={profile?.full_name || "Enter your name"}
+                    className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground"
+                    required
+                  />
+                </div>
+                <Button type="submit" disabled={editingProfile} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 glow-green">
+                  {editingProfile ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Save Changes
                 </Button>
               </form>
             </div>
