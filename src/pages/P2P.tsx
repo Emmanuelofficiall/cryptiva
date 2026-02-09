@@ -8,7 +8,7 @@ import { Navigate } from "react-router-dom";
 import {
   Loader2, ShoppingCart, Tag, Plus, X, CheckCircle, CreditCard,
   User, Phone, Wallet, ArrowRight, Shield, ArrowLeftRight, Search,
-  BarChart3, Image, ListOrdered, TrendingUp, Store, Copy
+  BarChart3, Image, ListOrdered, TrendingUp, Store, Copy, Globe, Smartphone, Building2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 
 type Tab = "market" | "my-orders" | "my-trades" | "payment" | "gallery" | "orders" | "trades" | "earnings" | "merchant";
+type TradeFilter = "all" | "completed" | "pending" | "cancelled";
 
 const P2P = () => {
   const { user, loading: authLoading } = useAuth();
@@ -37,6 +38,8 @@ const P2P = () => {
   const [pmMethod, setPmMethod] = useState("MTN MoMo");
   const [convertAmount, setConvertAmount] = useState("");
   const [convertDirection, setConvertDirection] = useState<"to-local" | "to-usdt">("to-local");
+  const [tradeFilter, setTradeFilter] = useState<TradeFilter>("all");
+  const [galleryRegion, setGalleryRegion] = useState<"africa" | "international" | "asia">("africa");
 
   const { data: currencies } = useQuery({
     queryKey: ["p2p-currencies"],
@@ -139,10 +142,14 @@ const P2P = () => {
     toast({ title: "Copied!", description: `${label} copied to clipboard.` });
   };
 
-  // Buy USDT from merchant
+  // Buy USDT from merchant - starts as pending_payment, buyer must verify payment
   const handleBuy = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedMerchant || !buyAmount) return;
+    if (!myPaymentMethods || myPaymentMethods.length === 0) {
+      toast({ title: "Add payment method first", description: "Go to the Payment tab to add your payment method before trading.", variant: "destructive" });
+      return;
+    }
     setSubmitting(true);
     try {
       const { error } = await supabase.from("p2p_orders").insert({
@@ -156,7 +163,7 @@ const P2P = () => {
         status: "pending_payment",
       });
       if (error) throw error;
-      toast({ title: "Buy order created!", description: `Send ${selectedCurrency} ${(Number(buyAmount) * getPrice()).toLocaleString()} to the merchant and confirm.` });
+      toast({ title: "Buy order created!", description: `Send ${selectedCurrency} ${(Number(buyAmount) * getPrice()).toLocaleString()} to the merchant, then confirm payment in My Orders.` });
       setBuyAmount("");
       setSelectedMerchant(null);
       qc.invalidateQueries({ queryKey: ["my-p2p-orders"] });
@@ -171,6 +178,10 @@ const P2P = () => {
   const handleSell = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedMerchant || !sellAmount) return;
+    if (!myPaymentMethods || myPaymentMethods.length === 0) {
+      toast({ title: "Add payment method first", description: "Go to the Payment tab to add your payment method before trading.", variant: "destructive" });
+      return;
+    }
     setSubmitting(true);
     try {
       const { error } = await supabase.from("p2p_orders").insert({
@@ -184,7 +195,7 @@ const P2P = () => {
         status: "pending_payment",
       });
       if (error) throw error;
-      toast({ title: "Sell order created!", description: "Waiting for merchant to send payment and you to release USDT." });
+      toast({ title: "Sell order created!", description: "Verify your payment details in My Orders before proceeding." });
       setSellAmount("");
       setSelectedMerchant(null);
       qc.invalidateQueries({ queryKey: ["my-p2p-orders"] });
@@ -483,11 +494,12 @@ const P2P = () => {
           </div>
         )}
 
-        {/* MY ORDERS TAB */}
+        {/* MY ORDERS TAB - with verification flow */}
         {tab === "my-orders" && (
           <div className="glass-card overflow-hidden">
             <div className="p-5 border-b border-border">
               <h3 className="font-display font-semibold text-foreground">My P2P Orders</h3>
+              <p className="text-sm text-muted-foreground">Both parties must verify payments before completing trades</p>
             </div>
             {(!myOrders || myOrders.length === 0) ? (
               <div className="p-12 text-center text-muted-foreground">No orders yet.</div>
@@ -499,53 +511,102 @@ const P2P = () => {
                   const isMerchantOnBuy = o.order_type === "buy" && o.matched_user_id === user.id;
                   const isMerchantOnSell = o.order_type === "sell" && o.matched_user_id === user.id;
 
+                  const statusSteps = (() => {
+                    if (o.order_type === "buy") {
+                      return [
+                        { label: "Order Created", done: true },
+                        { label: "Buyer Sends Payment", done: ["payment_sent", "completed"].includes(o.status) },
+                        { label: "Merchant Verifies & Releases USDT", done: o.status === "completed" },
+                      ];
+                    } else {
+                      return [
+                        { label: "Order Created", done: true },
+                        { label: "Merchant Sends Payment", done: ["payment_sent", "completed"].includes(o.status) },
+                        { label: "Seller Verifies & Releases USDT", done: o.status === "completed" },
+                      ];
+                    }
+                  })();
+
                   return (
                     <div key={o.id} className="p-4">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className={`text-xs font-semibold px-2 py-1 rounded-full ${o.order_type === "buy" ? "bg-primary/10 text-primary" : "bg-accent/10 text-accent"}`}>
-                              {o.order_type.toUpperCase()}
-                            </span>
-                            <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                              o.status === "completed" ? "bg-primary/10 text-primary" :
-                              o.status === "cancelled" ? "bg-destructive/10 text-destructive" :
-                              "bg-secondary text-muted-foreground"
-                            }`}>{o.status?.replace("_", " ")}</span>
+                      <div className="flex flex-col gap-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`text-xs font-semibold px-2 py-1 rounded-full ${o.order_type === "buy" ? "bg-primary/10 text-primary" : "bg-accent/10 text-accent"}`}>
+                                {o.order_type.toUpperCase()}
+                              </span>
+                              <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                                o.status === "completed" ? "bg-primary/10 text-primary" :
+                                o.status === "cancelled" ? "bg-destructive/10 text-destructive" :
+                                "bg-secondary text-muted-foreground"
+                              }`}>{o.status?.replace("_", " ")}</span>
+                            </div>
+                            <p className="text-sm text-foreground font-semibold">{Number(o.amount).toLocaleString()} USDT</p>
+                            <p className="text-xs text-muted-foreground">
+                              {o.local_currency} {(Number(o.amount) * Number(o.price_per_unit)).toLocaleString()} • {new Date(o.created_at!).toLocaleDateString()}
+                            </p>
+                            {o.matched_user_id && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Trading with: {getName(o.matched_user_id === user.id ? o.user_id : o.matched_user_id)}
+                              </p>
+                            )}
                           </div>
-                          <p className="text-sm text-foreground font-semibold">{Number(o.amount).toLocaleString()} USDT</p>
-                          <p className="text-xs text-muted-foreground">
-                            {o.local_currency} {(Number(o.amount) * Number(o.price_per_unit)).toLocaleString()} • {new Date(o.created_at!).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          {isBuyer && o.status === "pending_payment" && (
-                            <>
-                              <Button size="sm" onClick={() => confirmPaymentSent(o.id)} className="bg-primary text-primary-foreground h-8 text-xs">
-                                <CheckCircle className="w-3 h-3 mr-1" /> I've Sent Payment
+                          <div className="flex gap-2 flex-wrap">
+                            {/* BUY flow: buyer confirms payment → merchant verifies & releases */}
+                            {isBuyer && o.status === "pending_payment" && (
+                              <>
+                                <Button size="sm" onClick={() => confirmPaymentSent(o.id)} className="bg-primary text-primary-foreground h-8 text-xs">
+                                  <CheckCircle className="w-3 h-3 mr-1" /> Verify: I've Sent Payment
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => cancelOrder(o.id)} className="border-destructive text-destructive h-8 text-xs">Cancel</Button>
+                              </>
+                            )}
+                            {isBuyer && o.status === "payment_sent" && (
+                              <span className="text-xs text-muted-foreground bg-secondary px-3 py-1.5 rounded-full">⏳ Waiting for merchant to verify & release</span>
+                            )}
+                            {isMerchantOnBuy && o.status === "pending_payment" && (
+                              <span className="text-xs text-muted-foreground bg-secondary px-3 py-1.5 rounded-full">⏳ Waiting for buyer to send payment</span>
+                            )}
+                            {isMerchantOnBuy && o.status === "payment_sent" && (
+                              <Button size="sm" onClick={() => releaseUsdt(o.id, o.user_id, Number(o.amount))} className="bg-primary text-primary-foreground h-8 text-xs">
+                                <CheckCircle className="w-3 h-3 mr-1" /> Verify Payment Received & Release USDT
                               </Button>
+                            )}
+                            {/* SELL flow: merchant confirms payment → seller verifies & releases */}
+                            {isMerchantOnSell && o.status === "pending_payment" && (
+                              <Button size="sm" onClick={() => confirmPaymentSent(o.id)} className="bg-accent text-accent-foreground h-8 text-xs">
+                                <CheckCircle className="w-3 h-3 mr-1" /> Verify: I've Sent Payment
+                              </Button>
+                            )}
+                            {isMerchantOnSell && o.status === "payment_sent" && (
+                              <span className="text-xs text-muted-foreground bg-secondary px-3 py-1.5 rounded-full">⏳ Waiting for seller to verify & release</span>
+                            )}
+                            {isSeller && o.status === "pending_payment" && (
+                              <span className="text-xs text-muted-foreground bg-secondary px-3 py-1.5 rounded-full">⏳ Waiting for merchant to send payment</span>
+                            )}
+                            {isSeller && o.status === "payment_sent" && (
+                              <Button size="sm" onClick={() => releaseUsdtSell(o.id, o.matched_user_id!, Number(o.amount))} className="bg-accent text-accent-foreground h-8 text-xs">
+                                <CheckCircle className="w-3 h-3 mr-1" /> Verify Payment Received & Release USDT
+                              </Button>
+                            )}
+                            {o.user_id === user.id && o.status === "open" && (
                               <Button size="sm" variant="outline" onClick={() => cancelOrder(o.id)} className="border-destructive text-destructive h-8 text-xs">Cancel</Button>
-                            </>
-                          )}
-                          {isMerchantOnBuy && o.status === "payment_sent" && (
-                            <Button size="sm" onClick={() => releaseUsdt(o.id, o.user_id, Number(o.amount))} className="bg-primary text-primary-foreground h-8 text-xs">
-                              <CheckCircle className="w-3 h-3 mr-1" /> Release USDT
-                            </Button>
-                          )}
-                          {isMerchantOnSell && o.status === "pending_payment" && (
-                            <Button size="sm" onClick={() => confirmPaymentSent(o.id)} className="bg-accent text-accent-foreground h-8 text-xs">
-                              <CheckCircle className="w-3 h-3 mr-1" /> I've Sent Payment
-                            </Button>
-                          )}
-                          {isSeller && o.status === "payment_sent" && (
-                            <Button size="sm" onClick={() => releaseUsdtSell(o.id, o.matched_user_id!, Number(o.amount))} className="bg-accent text-accent-foreground h-8 text-xs">
-                              <CheckCircle className="w-3 h-3 mr-1" /> Release USDT
-                            </Button>
-                          )}
-                          {o.user_id === user.id && o.status === "open" && (
-                            <Button size="sm" variant="outline" onClick={() => cancelOrder(o.id)} className="border-destructive text-destructive h-8 text-xs">Cancel</Button>
-                          )}
+                            )}
+                          </div>
                         </div>
+                        {/* Progress steps */}
+                        {o.status !== "cancelled" && o.status !== "open" && (
+                          <div className="flex items-center gap-1 mt-1">
+                            {statusSteps.map((step, i) => (
+                              <div key={i} className="flex items-center gap-1">
+                                <div className={`w-2 h-2 rounded-full ${step.done ? "bg-primary" : "bg-muted-foreground/30"}`} />
+                                <span className={`text-[10px] ${step.done ? "text-primary" : "text-muted-foreground"}`}>{step.label}</span>
+                                {i < statusSteps.length - 1 && <div className={`w-6 h-0.5 ${step.done ? "bg-primary" : "bg-muted-foreground/30"}`} />}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -660,10 +721,88 @@ const P2P = () => {
           </div>
         )}
 
-        {/* GALLERY TAB */}
+        {/* GALLERY TAB - Payment Methods Gallery */}
         {tab === "gallery" && (
-          <div className="glass-card p-12 text-center text-muted-foreground">
-            Gallery coming soon — merchant proofs & screenshots will appear here.
+          <div className="glass-card overflow-hidden">
+            <div className="p-5 border-b border-border">
+              <div className="flex items-center gap-3 mb-1">
+                <Globe className="w-6 h-6 text-primary" />
+                <h3 className="font-display font-semibold text-foreground text-lg">Payment Methods Gallery</h3>
+              </div>
+              <p className="text-sm text-muted-foreground ml-9">30+ payment methods supported across 13 currencies</p>
+            </div>
+            <div className="p-4">
+              <div className="flex rounded-lg overflow-hidden border border-border mb-6">
+                {([
+                  { key: "africa" as const, label: "Africa", icon: Smartphone },
+                  { key: "international" as const, label: "International", icon: CreditCard },
+                  { key: "asia" as const, label: "Asia", icon: Building2 },
+                ]).map((r) => (
+                  <button
+                    key={r.key}
+                    onClick={() => setGalleryRegion(r.key)}
+                    className={`flex-1 py-2.5 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
+                      galleryRegion === r.key
+                        ? "bg-accent text-accent-foreground"
+                        : "bg-card text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <r.icon className="w-4 h-4" />
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {galleryRegion === "africa" && [
+                  { name: "MTN Mobile Money", desc: "Mobile money transfer - Rwanda, Uganda, Ghana", emoji: "📱" },
+                  { name: "Airtel Money", desc: "Mobile money transfer - Multiple African countries", emoji: "📲" },
+                  { name: "M-Pesa", desc: "Mobile money - Kenya, Tanzania", emoji: "💰" },
+                  { name: "Bank of Kigali", desc: "Bank transfer - Rwanda", emoji: "🏦" },
+                  { name: "Equity Bank", desc: "Bank transfer - Kenya, Rwanda, Uganda", emoji: "🏦" },
+                  { name: "Orange Money", desc: "Mobile money - Central & West Africa", emoji: "📱" },
+                  { name: "Wave", desc: "Mobile money - Senegal, Côte d'Ivoire", emoji: "🌊" },
+                  { name: "Ecobank", desc: "Bank transfer - Pan-African", emoji: "🏦" },
+                ].map((pm) => (
+                  <div key={pm.name} className="glass-card p-4 flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-xl">{pm.emoji}</div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{pm.name}</p>
+                      <p className="text-xs text-muted-foreground">{pm.desc}</p>
+                    </div>
+                  </div>
+                ))}
+                {galleryRegion === "international" && [
+                  { name: "Bank Transfer (SWIFT)", desc: "International wire transfer", emoji: "🏦" },
+                  { name: "PayPal", desc: "Online payment - Global", emoji: "💳" },
+                  { name: "Wise (TransferWise)", desc: "Low-cost international transfer", emoji: "🌍" },
+                  { name: "Western Union", desc: "Money transfer - Global", emoji: "💵" },
+                  { name: "Skrill", desc: "Digital wallet - International", emoji: "💰" },
+                  { name: "TRC20 USDT", desc: "Crypto wallet - TRON network", emoji: "🔗" },
+                ].map((pm) => (
+                  <div key={pm.name} className="glass-card p-4 flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-xl">{pm.emoji}</div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{pm.name}</p>
+                      <p className="text-xs text-muted-foreground">{pm.desc}</p>
+                    </div>
+                  </div>
+                ))}
+                {galleryRegion === "asia" && [
+                  { name: "GCash", desc: "Mobile wallet - Philippines", emoji: "📱" },
+                  { name: "GoPay", desc: "Digital wallet - Indonesia", emoji: "💳" },
+                  { name: "UPI", desc: "Unified Payments - India", emoji: "🇮🇳" },
+                  { name: "PromptPay", desc: "Mobile payment - Thailand", emoji: "📲" },
+                ].map((pm) => (
+                  <div key={pm.name} className="glass-card p-4 flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-xl">{pm.emoji}</div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{pm.name}</p>
+                      <p className="text-xs text-muted-foreground">{pm.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
@@ -696,10 +835,70 @@ const P2P = () => {
           </div>
         )}
 
-        {/* TRADES TAB */}
+        {/* TRADES TAB - with filters like reference */}
         {tab === "trades" && (
-          <div className="glass-card p-12 text-center text-muted-foreground">
-            Trade history and analytics coming soon.
+          <div className="glass-card overflow-hidden">
+            <div className="p-5 border-b border-border">
+              <h3 className="font-display font-semibold text-foreground text-lg">Trade History</h3>
+              <p className="text-sm text-muted-foreground">View all your P2P trades</p>
+            </div>
+            <div className="p-4">
+              <div className="flex rounded-lg overflow-hidden border border-border mb-6">
+                {(["all", "completed", "pending", "cancelled"] as TradeFilter[]).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setTradeFilter(f)}
+                    className={`flex-1 py-2.5 text-sm font-medium capitalize transition-colors ${
+                      tradeFilter === f
+                        ? "bg-accent text-accent-foreground"
+                        : "bg-card text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
+                  </button>
+                ))}
+              </div>
+              {(() => {
+                const allTrades = myOrders || [];
+                const filtered = tradeFilter === "all"
+                  ? allTrades
+                  : allTrades.filter((o) => {
+                      if (tradeFilter === "completed") return o.status === "completed";
+                      if (tradeFilter === "pending") return ["pending_payment", "payment_sent", "open"].includes(o.status);
+                      if (tradeFilter === "cancelled") return o.status === "cancelled";
+                      return true;
+                    });
+                return filtered.length === 0 ? (
+                  <div className="p-12 text-center text-muted-foreground">No trades yet</div>
+                ) : (
+                  <div className="divide-y divide-border/50">
+                    {filtered.map((o) => (
+                      <div key={o.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`text-xs font-semibold px-2 py-1 rounded-full ${o.order_type === "buy" ? "bg-primary/10 text-primary" : "bg-accent/10 text-accent"}`}>
+                              {o.order_type.toUpperCase()}
+                            </span>
+                            <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                              o.status === "completed" ? "bg-primary/10 text-primary" :
+                              o.status === "cancelled" ? "bg-destructive/10 text-destructive" :
+                              "bg-secondary text-muted-foreground"
+                            }`}>{o.status?.replace("_", " ")}</span>
+                          </div>
+                          <p className="text-sm text-foreground font-semibold">{Number(o.amount).toLocaleString()} USDT</p>
+                          <p className="text-xs text-muted-foreground">
+                            {o.local_currency} {(Number(o.amount) * Number(o.price_per_unit)).toLocaleString()} • {new Date(o.created_at!).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {o.matched_user_id ? `with ${getName(o.matched_user_id === user.id ? o.user_id : o.matched_user_id)}` : "Open"}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         )}
 
