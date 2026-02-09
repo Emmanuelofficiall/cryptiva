@@ -1,13 +1,13 @@
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, TrendingUp, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 
 const plans = [
-  { name: "Bitcoin", rate: "5%", minUsdt: 37, duration: "30 days", badge: null },
-  { name: "Ethereum", rate: "7%", minUsdt: 74, duration: "45 days", badge: "Popular" },
-  { name: "Solana", rate: "10%", minUsdt: 185, duration: "60 days", badge: null },
-  { name: "Cardano", rate: "12%", minUsdt: 370, duration: "90 days", badge: "Best Value" },
+  { name: "Bitcoin", icon: "₿", invest: 15, dailyIncome: 0.6, duration: 90, color: "from-amber-500 to-orange-600" },
+  { name: "Ethereum", icon: "Ξ", invest: 30, dailyIncome: 1, duration: 90, color: "from-blue-400 to-indigo-600" },
+  { name: "Solana", icon: "◎", invest: 60, dailyIncome: 2, duration: 90, color: "from-purple-500 to-violet-600" },
+  { name: "Cardano", icon: "₳", invest: 120, dailyIncome: 4, duration: 90, color: "from-cyan-400 to-blue-600" },
 ];
 
 const PlansSection = () => {
@@ -36,31 +36,28 @@ const PlansSection = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
-              className="glass-card p-6 relative hover:border-primary/30 transition-all"
+              className="relative group"
             >
-              {plan.badge && (
-                <span className="absolute top-4 right-4 text-xs font-semibold bg-primary/10 text-primary px-3 py-1 rounded-full">
-                  {plan.badge}
-                </span>
-              )}
-              <h3 className="text-lg font-display font-semibold text-foreground mb-4">{plan.name}</h3>
-              <p className="text-4xl font-display font-bold text-primary mb-1">{plan.rate}</p>
-              <p className="text-sm text-muted-foreground mb-6">daily return</p>
-              <div className="space-y-3 mb-6">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Min. Deposit</span>
-                  <span className="text-foreground font-medium">${plan.minUsdt} USDT</span>
+              <div className={`absolute -inset-0.5 bg-gradient-to-r ${plan.color} rounded-2xl blur opacity-0 group-hover:opacity-20 transition-opacity duration-500`} />
+              <div className="relative glass-card p-6 hover:border-primary/30 transition-all h-full flex flex-col">
+                <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${plan.color} flex items-center justify-center text-lg font-bold text-white mb-4`}>
+                  {plan.icon}
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Duration</span>
-                  <span className="text-foreground font-medium">{plan.duration}</span>
+                <h3 className="text-lg font-display font-semibold text-foreground mb-3">{plan.name}</h3>
+                <div className="flex items-baseline gap-1 mb-1">
+                  <span className="text-3xl font-display font-bold text-foreground">${plan.invest}</span>
                 </div>
+                <p className="text-xs text-muted-foreground mb-4">Earn ${plan.dailyIncome}/day for {plan.duration} days</p>
+                <div className="flex justify-between text-sm mb-4">
+                  <span className="text-muted-foreground">Total Return</span>
+                  <span className="text-accent font-bold">${(plan.dailyIncome * plan.duration).toLocaleString()}</span>
+                </div>
+                <Link to="/plans" className="mt-auto">
+                  <Button className={`w-full bg-gradient-to-r ${plan.color} text-white hover:opacity-90 gap-2`}>
+                    <Sparkles className="w-4 h-4" /> Invest
+                  </Button>
+                </Link>
               </div>
-              <Link to="/plans">
-                <Button variant="outline" className="w-full border-border hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all">
-                  Select Plan
-                </Button>
-              </Link>
             </motion.div>
           ))}
         </div>

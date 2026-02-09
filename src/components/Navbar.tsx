@@ -14,11 +14,12 @@ const Navbar = () => {
 
   const links = [
     { to: "/", label: "Home" },
-    { to: isAdmin ? "/admin" : "/dashboard", label: "Dashboard" },
+    { to: "/dashboard", label: "Dashboard" },
     { to: "/plans", label: "Plans" },
     { to: "/p2p", label: "P2P" },
     { to: "/tasks", label: "Tasks" },
     { to: "/referral", label: "Referral" },
+    ...(isAdmin ? [{ to: "/admin", label: "Admin" }] : []),
   ];
 
   const handleSignOut = async () => {

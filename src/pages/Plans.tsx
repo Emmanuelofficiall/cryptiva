@@ -5,19 +5,18 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight, Loader2, Sparkles, TrendingUp, Clock, DollarSign } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 
 const allPlans = [
-  { name: "Bitcoin", rate: 5, minUsdt: 37, maxUsdt: 73, duration: 30, badge: null },
-  { name: "Ethereum", rate: 7, minUsdt: 74, maxUsdt: 184, duration: 45, badge: "Popular" },
-  { name: "Solana", rate: 10, minUsdt: 185, maxUsdt: 370, duration: 60, badge: null },
-  { name: "Cardano", rate: 12, minUsdt: 370, maxUsdt: 740, duration: 90, badge: "Best Value" },
-  { name: "Polkadot", rate: 15, minUsdt: 741, maxUsdt: 3700, duration: 120, badge: null },
-  { name: "Avalanche", rate: 18, minUsdt: 3701, maxUsdt: null, duration: 180, badge: "VIP" },
+  { name: "Bitcoin", icon: "₿", invest: 15, dailyIncome: 0.6, duration: 90, badge: null, color: "from-amber-500 to-orange-600" },
+  { name: "Ethereum", icon: "Ξ", invest: 30, dailyIncome: 1, duration: 90, badge: "Popular", color: "from-blue-400 to-indigo-600" },
+  { name: "Solana", icon: "◎", invest: 60, dailyIncome: 2, duration: 90, badge: null, color: "from-purple-500 to-violet-600" },
+  { name: "Cardano", icon: "₳", invest: 120, dailyIncome: 4, duration: 90, badge: "Best Value", color: "from-cyan-400 to-blue-600" },
+  { name: "BNB", icon: "⬡", invest: 240, dailyIncome: 8, duration: 90, badge: null, color: "from-yellow-400 to-amber-600" },
+  { name: "Binance USD", icon: "$", invest: 480, dailyIncome: 16, duration: 90, badge: "Premium", color: "from-emerald-400 to-green-600" },
+  { name: "Litecoin", icon: "Ł", invest: 1000, dailyIncome: 32, duration: 90, badge: "VIP", color: "from-gray-300 to-slate-500" },
 ];
 
 const Plans = () => {
@@ -25,39 +24,28 @@ const Plans = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [selectedPlan, setSelectedPlan] = useState<typeof allPlans[0] | null>(null);
-  const [investAmount, setInvestAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const handleInvest = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleInvest = async () => {
     if (!user) { navigate("/login"); return; }
     if (!selectedPlan) return;
-    const amountUsdt = Number(investAmount);
-    if (amountUsdt < selectedPlan.minUsdt || (selectedPlan.maxUsdt && amountUsdt > selectedPlan.maxUsdt)) {
-      toast({
-        title: "Invalid amount",
-        description: `Amount must be between $${selectedPlan.minUsdt} and ${selectedPlan.maxUsdt ? `$${selectedPlan.maxUsdt}` : "unlimited"} USDT.`,
-        variant: "destructive",
-      });
-      return;
-    }
     setSubmitting(true);
     try {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + selectedPlan.duration);
+      const dailyRate = (selectedPlan.dailyIncome / selectedPlan.invest) * 100;
 
       const { error } = await supabase.from("investments").insert({
         user_id: user.id,
         plan_name: selectedPlan.name,
-        amount: amountUsdt,
-        daily_rate: selectedPlan.rate,
+        amount: selectedPlan.invest,
+        daily_rate: dailyRate,
         duration_days: selectedPlan.duration,
         expires_at: expiresAt.toISOString(),
       });
       if (error) throw error;
-      toast({ title: "Investment Created!", description: `You've invested $${amountUsdt} USDT in the ${selectedPlan.name} plan.` });
+      toast({ title: "Investment Created!", description: `You've invested $${selectedPlan.invest} USDT in the ${selectedPlan.name} plan.` });
       setSelectedPlan(null);
-      setInvestAmount("");
       navigate("/dashboard");
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -76,91 +64,94 @@ const Plans = () => {
             Choose Your <span className="text-gradient">Growth Path</span>
           </h1>
           <p className="text-muted-foreground mt-4 max-w-lg mx-auto">
-            Select from 6 crypto-powered plans. All amounts in USDT.
+            Invest in crypto-powered plans and earn daily returns for 90 days.
           </p>
         </div>
 
-        {/* Invest Modal */}
+        {/* Confirm Modal */}
         {selectedPlan && (
           <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="glass-card p-8 max-w-md w-full glow-green"
-            >
-              <h3 className="text-xl font-display font-bold text-foreground mb-1">Invest in {selectedPlan.name} Plan</h3>
-              <p className="text-sm text-muted-foreground mb-6">{selectedPlan.rate}% daily return • {selectedPlan.duration} days</p>
-              <form onSubmit={handleInvest} className="space-y-4">
-                <div>
-                  <Label className="text-foreground text-sm">Investment Amount (USDT)</Label>
-                  <Input
-                    type="number"
-                    value={investAmount}
-                    onChange={(e) => setInvestAmount(e.target.value)}
-                    placeholder={`Min: $${selectedPlan.minUsdt} USDT`}
-                    className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground"
-                    required
-                    min={selectedPlan.minUsdt}
-                    max={selectedPlan.maxUsdt || undefined}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Range: ${selectedPlan.minUsdt} – {selectedPlan.maxUsdt ? `$${selectedPlan.maxUsdt}` : "Unlimited"} USDT
-                  </p>
-                </div>
-                <div className="flex gap-3">
-                  <Button type="submit" disabled={submitting} className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 glow-green">
-                    {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                    Confirm Investment
-                  </Button>
-                  <Button type="button" variant="outline" onClick={() => setSelectedPlan(null)} className="border-border">
-                    Cancel
-                  </Button>
-                </div>
-              </form>
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-card p-8 max-w-md w-full glow-green">
+              <h3 className="text-xl font-display font-bold text-foreground mb-1">Confirm {selectedPlan.name} Plan</h3>
+              <p className="text-sm text-muted-foreground mb-6">Invest ${selectedPlan.invest} USDT • Earn ${selectedPlan.dailyIncome}/day • {selectedPlan.duration} days</p>
+              <div className="bg-secondary rounded-xl p-4 mb-6 space-y-2">
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Investment</span><span className="text-foreground font-semibold">${selectedPlan.invest} USDT</span></div>
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Daily Income</span><span className="text-primary font-semibold">${selectedPlan.dailyIncome} USDT</span></div>
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total Return</span><span className="text-accent font-semibold">${(selectedPlan.dailyIncome * selectedPlan.duration).toLocaleString()} USDT</span></div>
+              </div>
+              <div className="flex gap-3">
+                <Button onClick={handleInvest} disabled={submitting} className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 glow-green">
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}Confirm Investment
+                </Button>
+                <Button variant="outline" onClick={() => setSelectedPlan(null)} className="border-border">Cancel</Button>
+              </div>
             </motion.div>
           </div>
         )}
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {allPlans.map((plan, i) => (
             <motion.div
               key={plan.name}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.08 }}
-              className="glass-card p-6 relative hover:border-primary/30 transition-all"
+              transition={{ delay: i * 0.08, type: "spring", stiffness: 100 }}
+              className="relative group"
             >
-              {plan.badge && (
-                <span className={`absolute top-4 right-4 text-xs font-semibold px-3 py-1 rounded-full ${
-                  plan.badge === "VIP" ? "bg-accent/10 text-accent" : "bg-primary/10 text-primary"
-                }`}>
-                  {plan.badge}
-                </span>
-              )}
-              <h3 className="text-xl font-display font-semibold text-foreground mb-4">{plan.name}</h3>
-              <p className="text-5xl font-display font-bold text-primary mb-1">{plan.rate}%</p>
-              <p className="text-sm text-muted-foreground mb-6">daily return</p>
-              <div className="space-y-3 mb-6 text-sm">
-                {[
-                  ["Min. Deposit", `$${plan.minUsdt} USDT`],
-                  ["Max. Deposit", plan.maxUsdt ? `$${plan.maxUsdt} USDT` : "Unlimited"],
-                  ["Duration", `${plan.duration} days`],
-                ].map(([label, value]) => (
-                  <div key={label} className="flex justify-between">
-                    <span className="text-muted-foreground">{label}</span>
-                    <span className="text-foreground font-medium">{value}</span>
+              {/* Glow effect */}
+              <div className={`absolute -inset-0.5 bg-gradient-to-r ${plan.color} rounded-2xl blur opacity-0 group-hover:opacity-20 transition-opacity duration-500`} />
+              
+              <div className="relative glass-card p-6 hover:border-primary/30 transition-all h-full flex flex-col">
+                {plan.badge && (
+                  <span className={`absolute top-4 right-4 text-xs font-bold px-3 py-1 rounded-full ${
+                    plan.badge === "VIP" ? "bg-accent/15 text-accent" :
+                    plan.badge === "Premium" ? "bg-primary/15 text-primary" :
+                    "bg-primary/10 text-primary"
+                  }`}>{plan.badge}</span>
+                )}
+                
+                {/* Icon */}
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${plan.color} flex items-center justify-center text-xl font-bold text-white mb-4`}>
+                  {plan.icon}
+                </div>
+
+                <h3 className="text-lg font-display font-bold text-foreground mb-4">{plan.name}</h3>
+                
+                {/* Investment amount */}
+                <div className="flex items-baseline gap-1 mb-1">
+                  <span className="text-3xl font-display font-bold text-foreground">${plan.invest}</span>
+                  <span className="text-sm text-muted-foreground">USDT</span>
+                </div>
+                <p className="text-xs text-muted-foreground mb-5">One-time investment</p>
+
+                <div className="space-y-3 mb-6 flex-1">
+                  <div className="flex items-center gap-2 text-sm">
+                    <TrendingUp className="w-4 h-4 text-primary shrink-0" />
+                    <span className="text-muted-foreground">Daily Income</span>
+                    <span className="ml-auto text-primary font-bold">${plan.dailyIncome}</span>
                   </div>
-                ))}
+                  <div className="flex items-center gap-2 text-sm">
+                    <Clock className="w-4 h-4 text-accent shrink-0" />
+                    <span className="text-muted-foreground">Duration</span>
+                    <span className="ml-auto text-foreground font-medium">{plan.duration} days</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <DollarSign className="w-4 h-4 text-accent shrink-0" />
+                    <span className="text-muted-foreground">Total Return</span>
+                    <span className="ml-auto text-accent font-bold">${(plan.dailyIncome * plan.duration).toLocaleString()}</span>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={() => {
+                    if (!user) { navigate("/login"); return; }
+                    setSelectedPlan(plan);
+                  }}
+                  className={`w-full bg-gradient-to-r ${plan.color} text-white hover:opacity-90 gap-2 font-semibold transition-all`}
+                >
+                  <Sparkles className="w-4 h-4" /> Invest Now
+                </Button>
               </div>
-              <Button
-                onClick={() => {
-                  if (!user) { navigate("/login"); return; }
-                  setSelectedPlan(plan);
-                }}
-                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2"
-              >
-                Invest Now <ArrowRight className="w-4 h-4" />
-              </Button>
             </motion.div>
           ))}
         </div>

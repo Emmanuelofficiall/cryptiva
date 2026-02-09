@@ -6,14 +6,15 @@ import Navbar from "@/components/Navbar";
 import {
   Users, DollarSign, TrendingUp, Activity,
   CheckCircle, XCircle, BarChart3, GitBranch, Loader2, ShieldAlert,
-  MessageCircle, Send
+  MessageCircle, Send, Shield, Settings, Plus, Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Navigate } from "react-router-dom";
 
-type Tab = "overview" | "users" | "deposits" | "withdrawals" | "referrals" | "chat";
+type Tab = "overview" | "users" | "deposits" | "withdrawals" | "referrals" | "chat" | "merchants" | "p2p-settings";
 
 const AdminDashboard = () => {
   const { user, loading: authLoading } = useAuth();
@@ -37,19 +38,12 @@ const AdminDashboard = () => {
   const { data: allWithdrawals, refetch: refetchWithdrawals } = useQuery({ queryKey: ["admin-withdrawals"], enabled: !!isAdmin, queryFn: async () => { const { data } = await supabase.from("withdrawals").select("*").order("created_at", { ascending: false }); return data || []; } });
   const { data: allInvestments } = useQuery({ queryKey: ["admin-investments"], enabled: !!isAdmin, queryFn: async () => { const { data } = await supabase.from("investments").select("*"); return data || []; } });
   const { data: allCommissions } = useQuery({ queryKey: ["admin-commissions"], enabled: !!isAdmin, queryFn: async () => { const { data } = await supabase.from("referral_commissions").select("*"); return data || []; } });
+  const { data: merchants, refetch: refetchMerchants } = useQuery({ queryKey: ["admin-merchants"], enabled: !!isAdmin, queryFn: async () => { const { data } = await supabase.from("merchants").select("*").order("created_at", { ascending: false }); return data || []; } });
+  const { data: p2pSettings, refetch: refetchP2P } = useQuery({ queryKey: ["admin-p2p-settings"], enabled: !!isAdmin, queryFn: async () => { const { data } = await supabase.from("p2p_settings").select("*").order("currency"); return data || []; } });
 
   if (authLoading || roleLoading) return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   if (!user) return <Navigate to="/login" />;
-  if (!isAdmin) return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <div className="pt-24 flex flex-col items-center justify-center text-center px-4">
-        <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
-        <h1 className="text-2xl font-display font-bold text-foreground mb-2">Access Denied</h1>
-        <p className="text-muted-foreground">You don't have admin privileges.</p>
-      </div>
-    </div>
-  );
+  if (!isAdmin) return <Navigate to="/dashboard" />;
 
   const totalUsers = allProfiles?.length || 0;
   const totalInvested = allInvestments?.reduce((s, i) => s + Number(i.amount), 0) || 0;
@@ -82,6 +76,8 @@ const AdminDashboard = () => {
     { key: "deposits", label: "Deposits", icon: DollarSign },
     { key: "withdrawals", label: "Withdrawals", icon: Activity },
     { key: "referrals", label: "Referrals", icon: GitBranch },
+    { key: "merchants", label: "Merchants", icon: Shield },
+    { key: "p2p-settings", label: "P2P Prices", icon: Settings },
     { key: "chat", label: "Chat", icon: MessageCircle },
   ];
 
@@ -90,8 +86,8 @@ const AdminDashboard = () => {
       <Navbar />
       <div className="pt-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
         <div className="mb-8">
-          <h1 className="text-2xl font-display font-bold text-foreground">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">Manage users, deposits, withdrawals and referrals.</p>
+          <h1 className="text-2xl font-display font-bold text-foreground">Admin Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Manage users, deposits, withdrawals, merchants, and P2P settings.</p>
         </div>
 
         <div className="flex gap-1 mb-8 bg-secondary rounded-xl p-1 w-fit overflow-x-auto">
@@ -123,12 +119,8 @@ const AdminDashboard = () => {
                 <div className="divide-y divide-border/50">
                   {(allDeposits || []).slice(0, 4).map((d) => (
                     <div key={d.id} className="p-4 flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{getProfileName(d.user_id)}</p>
-                        <p className="text-xs text-muted-foreground">{d.method} • {new Date(d.created_at!).toLocaleDateString()}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold text-foreground">${Number(d.amount).toLocaleString()} USDT</p>
+                      <div><p className="text-sm font-medium text-foreground">{getProfileName(d.user_id)}</p><p className="text-xs text-muted-foreground">{d.method}</p></div>
+                      <div className="text-right"><p className="text-sm font-semibold text-foreground">${Number(d.amount).toLocaleString()}</p>
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${d.status === "approved" ? "bg-primary/10 text-primary" : d.status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-accent/10 text-accent"}`}>{d.status}</span>
                       </div>
                     </div>
@@ -144,12 +136,8 @@ const AdminDashboard = () => {
                 <div className="divide-y divide-border/50">
                   {(allWithdrawals || []).slice(0, 4).map((w) => (
                     <div key={w.id} className="p-4 flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{getProfileName(w.user_id)}</p>
-                        <p className="text-xs text-muted-foreground">{w.method} • {new Date(w.created_at!).toLocaleDateString()}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold text-foreground">${Number(w.amount).toLocaleString()} USDT</p>
+                      <div><p className="text-sm font-medium text-foreground">{getProfileName(w.user_id)}</p><p className="text-xs text-muted-foreground">{w.method}</p></div>
+                      <div className="text-right"><p className="text-sm font-semibold text-foreground">${Number(w.amount).toLocaleString()}</p>
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${w.status === "approved" ? "bg-primary/10 text-primary" : w.status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-accent/10 text-accent"}`}>{w.status}</span>
                       </div>
                     </div>
@@ -163,129 +151,226 @@ const AdminDashboard = () => {
 
         {activeTab === "users" && (
           <div>
-            <div className="mb-6">
-              <Input placeholder="Search users..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="max-w-sm bg-secondary border-border text-foreground placeholder:text-muted-foreground" />
-            </div>
-            <div className="glass-card overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead><tr className="border-b border-border">{["Name", "Email", "Referral Code", "Wallet (USDT)", "Joined"].map((h) => <th key={h} className="text-left text-xs text-muted-foreground font-medium p-4">{h}</th>)}</tr></thead>
-                  <tbody>
-                    {(allProfiles || []).filter((u) => (u.full_name || "").toLowerCase().includes(searchQuery.toLowerCase()) || (u.email || "").toLowerCase().includes(searchQuery.toLowerCase())).map((u) => (
-                      <tr key={u.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
-                        <td className="p-4 text-sm font-medium text-foreground">{u.full_name || "—"}</td>
-                        <td className="p-4 text-sm text-muted-foreground">{u.email}</td>
-                        <td className="p-4 text-sm font-mono text-primary">{u.referral_code}</td>
-                        <td className="p-4 text-sm text-foreground">${Number(u.wallet_balance || 0).toLocaleString()}</td>
-                        <td className="p-4 text-sm text-muted-foreground">{new Date(u.created_at!).toLocaleDateString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <div className="mb-6"><Input placeholder="Search users..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="max-w-sm bg-secondary border-border text-foreground placeholder:text-muted-foreground" /></div>
+            <div className="glass-card overflow-hidden"><div className="overflow-x-auto">
+              <table className="w-full">
+                <thead><tr className="border-b border-border">{["Name", "Email", "Referral Code", "Wallet (USDT)", "Joined"].map((h) => <th key={h} className="text-left text-xs text-muted-foreground font-medium p-4">{h}</th>)}</tr></thead>
+                <tbody>
+                  {(allProfiles || []).filter((u) => (u.full_name || "").toLowerCase().includes(searchQuery.toLowerCase()) || (u.email || "").toLowerCase().includes(searchQuery.toLowerCase())).map((u) => (
+                    <tr key={u.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                      <td className="p-4 text-sm font-medium text-foreground">{u.full_name || "—"}</td>
+                      <td className="p-4 text-sm text-muted-foreground">{u.email}</td>
+                      <td className="p-4 text-sm font-mono text-primary">{u.referral_code}</td>
+                      <td className="p-4 text-sm text-foreground">${Number(u.wallet_balance || 0).toLocaleString()}</td>
+                      <td className="p-4 text-sm text-muted-foreground">{new Date(u.created_at!).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div></div>
           </div>
         )}
 
         {activeTab === "deposits" && (
-          <div className="glass-card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead><tr className="border-b border-border">{["User", "Amount", "Method", "Ref", "Date", "Status", "Actions"].map((h) => <th key={h} className="text-left text-xs text-muted-foreground font-medium p-4">{h}</th>)}</tr></thead>
-                <tbody>
-                  {(allDeposits || []).map((d) => (
-                    <tr key={d.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
-                      <td className="p-4 text-sm font-medium text-foreground">{getProfileName(d.user_id)}</td>
-                      <td className="p-4 text-sm text-foreground font-semibold">${Number(d.amount).toLocaleString()} USDT</td>
-                      <td className="p-4 text-sm text-muted-foreground">{d.method}</td>
-                      <td className="p-4 text-sm text-muted-foreground font-mono">{d.transaction_ref || "—"}</td>
-                      <td className="p-4 text-sm text-muted-foreground">{new Date(d.created_at!).toLocaleDateString()}</td>
-                      <td className="p-4"><span className={`text-xs font-semibold px-2 py-1 rounded-full ${d.status === "approved" ? "bg-primary/10 text-primary" : d.status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-accent/10 text-accent"}`}>{d.status}</span></td>
-                      <td className="p-4">
-                        {d.status === "pending" ? (
-                          <div className="flex gap-2">
-                            <Button size="sm" onClick={() => handleDeposit(d.id, "approved")} className="bg-primary text-primary-foreground hover:bg-primary/90 h-8 text-xs"><CheckCircle className="w-3 h-3 mr-1" /> Approve</Button>
-                            <Button size="sm" variant="outline" onClick={() => handleDeposit(d.id, "rejected")} className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground h-8 text-xs"><XCircle className="w-3 h-3 mr-1" /> Reject</Button>
-                          </div>
-                        ) : <span className="text-xs text-muted-foreground">—</span>}
-                      </td>
-                    </tr>
-                  ))}
-                  {(!allDeposits || allDeposits.length === 0) && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">No deposits yet</td></tr>}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <div className="glass-card overflow-hidden"><div className="overflow-x-auto">
+            <table className="w-full">
+              <thead><tr className="border-b border-border">{["User", "Amount", "Method", "Ref", "Date", "Status", "Actions"].map((h) => <th key={h} className="text-left text-xs text-muted-foreground font-medium p-4">{h}</th>)}</tr></thead>
+              <tbody>
+                {(allDeposits || []).map((d) => (
+                  <tr key={d.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                    <td className="p-4 text-sm font-medium text-foreground">{getProfileName(d.user_id)}</td>
+                    <td className="p-4 text-sm text-foreground font-semibold">${Number(d.amount).toLocaleString()}</td>
+                    <td className="p-4 text-sm text-muted-foreground">{d.method}</td>
+                    <td className="p-4 text-sm text-muted-foreground font-mono">{d.transaction_ref || "—"}</td>
+                    <td className="p-4 text-sm text-muted-foreground">{new Date(d.created_at!).toLocaleDateString()}</td>
+                    <td className="p-4"><span className={`text-xs font-semibold px-2 py-1 rounded-full ${d.status === "approved" ? "bg-primary/10 text-primary" : d.status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-accent/10 text-accent"}`}>{d.status}</span></td>
+                    <td className="p-4">{d.status === "pending" ? (
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={() => handleDeposit(d.id, "approved")} className="bg-primary text-primary-foreground h-8 text-xs"><CheckCircle className="w-3 h-3 mr-1" />Approve</Button>
+                        <Button size="sm" variant="outline" onClick={() => handleDeposit(d.id, "rejected")} className="border-destructive text-destructive h-8 text-xs"><XCircle className="w-3 h-3 mr-1" />Reject</Button>
+                      </div>
+                    ) : <span className="text-xs text-muted-foreground">—</span>}</td>
+                  </tr>
+                ))}
+                {(!allDeposits || allDeposits.length === 0) && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">No deposits</td></tr>}
+              </tbody>
+            </table>
+          </div></div>
         )}
 
         {activeTab === "withdrawals" && (
-          <div className="glass-card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead><tr className="border-b border-border">{["User", "Amount", "Method", "Destination", "Date", "Status", "Actions"].map((h) => <th key={h} className="text-left text-xs text-muted-foreground font-medium p-4">{h}</th>)}</tr></thead>
-                <tbody>
-                  {(allWithdrawals || []).map((w) => (
-                    <tr key={w.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
-                      <td className="p-4 text-sm font-medium text-foreground">{getProfileName(w.user_id)}</td>
-                      <td className="p-4 text-sm text-foreground font-semibold">${Number(w.amount).toLocaleString()} USDT</td>
-                      <td className="p-4 text-sm text-muted-foreground">{w.method}</td>
-                      <td className="p-4 text-sm text-muted-foreground font-mono">{w.destination}</td>
-                      <td className="p-4 text-sm text-muted-foreground">{new Date(w.created_at!).toLocaleDateString()}</td>
-                      <td className="p-4"><span className={`text-xs font-semibold px-2 py-1 rounded-full ${w.status === "approved" ? "bg-primary/10 text-primary" : w.status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-accent/10 text-accent"}`}>{w.status}</span></td>
-                      <td className="p-4">
-                        {w.status === "pending" ? (
-                          <div className="flex gap-2">
-                            <Button size="sm" onClick={() => handleWithdrawal(w.id, "approved")} className="bg-primary text-primary-foreground hover:bg-primary/90 h-8 text-xs"><CheckCircle className="w-3 h-3 mr-1" /> Approve</Button>
-                            <Button size="sm" variant="outline" onClick={() => handleWithdrawal(w.id, "rejected")} className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground h-8 text-xs"><XCircle className="w-3 h-3 mr-1" /> Reject</Button>
-                          </div>
-                        ) : <span className="text-xs text-muted-foreground">—</span>}
-                      </td>
-                    </tr>
-                  ))}
-                  {(!allWithdrawals || allWithdrawals.length === 0) && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">No withdrawals yet</td></tr>}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <div className="glass-card overflow-hidden"><div className="overflow-x-auto">
+            <table className="w-full">
+              <thead><tr className="border-b border-border">{["User", "Amount", "Method", "Destination", "Date", "Status", "Actions"].map((h) => <th key={h} className="text-left text-xs text-muted-foreground font-medium p-4">{h}</th>)}</tr></thead>
+              <tbody>
+                {(allWithdrawals || []).map((w) => (
+                  <tr key={w.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                    <td className="p-4 text-sm font-medium text-foreground">{getProfileName(w.user_id)}</td>
+                    <td className="p-4 text-sm text-foreground font-semibold">${Number(w.amount).toLocaleString()}</td>
+                    <td className="p-4 text-sm text-muted-foreground">{w.method}</td>
+                    <td className="p-4 text-sm text-muted-foreground font-mono">{w.destination}</td>
+                    <td className="p-4 text-sm text-muted-foreground">{new Date(w.created_at!).toLocaleDateString()}</td>
+                    <td className="p-4"><span className={`text-xs font-semibold px-2 py-1 rounded-full ${w.status === "approved" ? "bg-primary/10 text-primary" : w.status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-accent/10 text-accent"}`}>{w.status}</span></td>
+                    <td className="p-4">{w.status === "pending" ? (
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={() => handleWithdrawal(w.id, "approved")} className="bg-primary text-primary-foreground h-8 text-xs"><CheckCircle className="w-3 h-3 mr-1" />Approve</Button>
+                        <Button size="sm" variant="outline" onClick={() => handleWithdrawal(w.id, "rejected")} className="border-destructive text-destructive h-8 text-xs"><XCircle className="w-3 h-3 mr-1" />Reject</Button>
+                      </div>
+                    ) : <span className="text-xs text-muted-foreground">—</span>}</td>
+                  </tr>
+                ))}
+                {(!allWithdrawals || allWithdrawals.length === 0) && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">No withdrawals</td></tr>}
+              </tbody>
+            </table>
+          </div></div>
         )}
 
         {activeTab === "referrals" && (
           <div>
             <div className="grid sm:grid-cols-3 gap-6 mb-8">
-              <div className="glass-card p-5 text-center"><p className="text-sm text-muted-foreground mb-1">Level A</p><p className="text-3xl font-display font-bold text-primary">5%</p><p className="text-xs text-muted-foreground">Direct referrals</p></div>
-              <div className="glass-card p-5 text-center"><p className="text-sm text-muted-foreground mb-1">Level B</p><p className="text-3xl font-display font-bold text-accent">3%</p><p className="text-xs text-muted-foreground">2nd level</p></div>
-              <div className="glass-card p-5 text-center"><p className="text-sm text-muted-foreground mb-1">Level C</p><p className="text-3xl font-display font-bold text-muted-foreground">1%</p><p className="text-xs text-muted-foreground">3rd level</p></div>
+              <div className="glass-card p-5 text-center"><p className="text-sm text-muted-foreground mb-1">Level A</p><p className="text-3xl font-display font-bold text-primary">5%</p></div>
+              <div className="glass-card p-5 text-center"><p className="text-sm text-muted-foreground mb-1">Level B</p><p className="text-3xl font-display font-bold text-accent">3%</p></div>
+              <div className="glass-card p-5 text-center"><p className="text-sm text-muted-foreground mb-1">Level C</p><p className="text-3xl font-display font-bold text-muted-foreground">1%</p></div>
             </div>
             <div className="glass-card overflow-hidden">
               <div className="p-5 border-b border-border"><h3 className="font-display font-semibold text-foreground">All Referral Commissions</h3></div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead><tr className="border-b border-border">{["Earner", "From User", "Level", "Rate", "Amount", "Date"].map((h) => <th key={h} className="text-left text-xs text-muted-foreground font-medium p-4">{h}</th>)}</tr></thead>
-                  <tbody>
-                    {(allCommissions || []).map((c) => (
-                      <tr key={c.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
-                        <td className="p-4 text-sm font-medium text-foreground">{getProfileName(c.user_id)}</td>
-                        <td className="p-4 text-sm text-muted-foreground">{getProfileName(c.from_user_id)}</td>
-                        <td className="p-4"><span className="text-xs font-semibold bg-primary/10 text-primary px-2 py-1 rounded-full">Level {c.level}</span></td>
-                        <td className="p-4 text-sm text-foreground">{c.rate}%</td>
-                        <td className="p-4 text-sm text-primary font-semibold">${Number(c.amount).toLocaleString()} USDT</td>
-                        <td className="p-4 text-sm text-muted-foreground">{new Date(c.created_at!).toLocaleDateString()}</td>
-                      </tr>
-                    ))}
-                    {(!allCommissions || allCommissions.length === 0) && <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No referral commissions yet</td></tr>}
-                  </tbody>
-                </table>
-              </div>
+              <div className="overflow-x-auto"><table className="w-full">
+                <thead><tr className="border-b border-border">{["Earner", "From User", "Level", "Rate", "Amount", "Date"].map((h) => <th key={h} className="text-left text-xs text-muted-foreground font-medium p-4">{h}</th>)}</tr></thead>
+                <tbody>
+                  {(allCommissions || []).map((c) => (
+                    <tr key={c.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                      <td className="p-4 text-sm font-medium text-foreground">{getProfileName(c.user_id)}</td>
+                      <td className="p-4 text-sm text-muted-foreground">{getProfileName(c.from_user_id)}</td>
+                      <td className="p-4"><span className="text-xs font-semibold bg-primary/10 text-primary px-2 py-1 rounded-full">Level {c.level}</span></td>
+                      <td className="p-4 text-sm text-foreground">{c.rate}%</td>
+                      <td className="p-4 text-sm text-primary font-semibold">${Number(c.amount).toLocaleString()}</td>
+                      <td className="p-4 text-sm text-muted-foreground">{new Date(c.created_at!).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                  {(!allCommissions || allCommissions.length === 0) && <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No commissions</td></tr>}
+                </tbody>
+              </table></div>
             </div>
           </div>
         )}
 
+        {activeTab === "merchants" && <MerchantsPanel profiles={allProfiles || []} merchants={merchants || []} refetch={refetchMerchants} />}
+        {activeTab === "p2p-settings" && <P2PSettingsPanel settings={p2pSettings || []} refetch={refetchP2P} />}
         {activeTab === "chat" && <AdminChatPanel />}
       </div>
     </div>
   );
 };
 
+// Merchants Management Panel
+const MerchantsPanel = ({ profiles, merchants, refetch }: { profiles: any[]; merchants: any[]; refetch: () => void }) => {
+  const { toast } = useToast();
+  const [selectedUserId, setSelectedUserId] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const addMerchant = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUserId || !displayName) return;
+    setSubmitting(true);
+    const { error } = await supabase.from("merchants").insert({ user_id: selectedUserId, display_name: displayName });
+    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+    else { toast({ title: "Merchant added!" }); setSelectedUserId(""); setDisplayName(""); refetch(); }
+    setSubmitting(false);
+  };
+
+  const removeMerchant = async (id: string) => {
+    await supabase.from("merchants").delete().eq("id", id);
+    toast({ title: "Merchant removed" });
+    refetch();
+  };
+
+  const nonMerchantProfiles = profiles.filter(p => !merchants.some(m => m.user_id === p.user_id));
+
+  return (
+    <div>
+      <div className="glass-card p-6 mb-6">
+        <h3 className="font-display font-semibold text-foreground mb-4">Add New Merchant</h3>
+        <form onSubmit={addMerchant} className="flex flex-col sm:flex-row gap-3">
+          <select value={selectedUserId} onChange={(e) => { setSelectedUserId(e.target.value); const p = profiles.find(p => p.user_id === e.target.value); setDisplayName(p?.full_name || ""); }}
+            className="flex-1 rounded-lg bg-secondary border border-border text-foreground p-2.5 text-sm">
+            <option value="">Select a user...</option>
+            {nonMerchantProfiles.map((p) => <option key={p.user_id} value={p.user_id}>{p.full_name || p.email}</option>)}
+          </select>
+          <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Display name" className="sm:w-48 bg-secondary border-border text-foreground placeholder:text-muted-foreground" required />
+          <Button type="submit" disabled={submitting} className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2">
+            <Plus className="w-4 h-4" /> Add Merchant
+          </Button>
+        </form>
+      </div>
+
+      <div className="glass-card overflow-hidden">
+        <div className="p-5 border-b border-border"><h3 className="font-display font-semibold text-foreground">Active Merchants</h3></div>
+        {merchants.length === 0 ? (
+          <div className="p-8 text-center text-muted-foreground">No merchants yet.</div>
+        ) : (
+          <div className="divide-y divide-border/50">
+            {merchants.map((m) => (
+              <div key={m.id} className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Shield className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{m.display_name}</p>
+                    <p className="text-xs text-muted-foreground">{m.user_id.slice(0, 8)}...</p>
+                  </div>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => removeMerchant(m.id)} className="border-destructive text-destructive h-8 text-xs"><Trash2 className="w-3 h-3 mr-1" />Remove</Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// P2P Price Settings Panel
+const P2PSettingsPanel = ({ settings, refetch }: { settings: any[]; refetch: () => void }) => {
+  const { toast } = useToast();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editPrice, setEditPrice] = useState("");
+
+  const updatePrice = async (id: string) => {
+    const { error } = await supabase.from("p2p_settings").update({ usdt_price: Number(editPrice), updated_at: new Date().toISOString() }).eq("id", id);
+    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+    else { toast({ title: "Price updated!" }); setEditingId(null); refetch(); }
+  };
+
+  return (
+    <div className="glass-card overflow-hidden">
+      <div className="p-5 border-b border-border"><h3 className="font-display font-semibold text-foreground">USDT Price Per Currency</h3></div>
+      <div className="divide-y divide-border/50">
+        {settings.map((s) => (
+          <div key={s.id} className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-foreground">{s.currency}</p>
+              <p className="text-xs text-muted-foreground">Last updated: {new Date(s.updated_at).toLocaleDateString()}</p>
+            </div>
+            {editingId === s.id ? (
+              <div className="flex items-center gap-2">
+                <Input type="number" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} className="w-32 bg-secondary border-border text-foreground text-sm h-8" />
+                <Button size="sm" onClick={() => updatePrice(s.id)} className="bg-primary text-primary-foreground h-8 text-xs">Save</Button>
+                <Button size="sm" variant="outline" onClick={() => setEditingId(null)} className="h-8 text-xs">Cancel</Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <span className="text-lg font-bold text-primary">{Number(s.usdt_price).toLocaleString()}</span>
+                <Button size="sm" variant="outline" onClick={() => { setEditingId(s.id); setEditPrice(String(s.usdt_price)); }} className="h-8 text-xs">Edit</Button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Admin Chat Panel
 const AdminChatPanel = () => {
   const { user } = useAuth();
   const { toast } = useToast();

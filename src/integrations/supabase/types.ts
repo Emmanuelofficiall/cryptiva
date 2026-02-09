@@ -157,12 +157,37 @@ export type Database = {
         }
         Relationships: []
       }
+      merchants: {
+        Row: {
+          created_at: string | null
+          display_name: string
+          id: string
+          is_active: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          display_name: string
+          id?: string
+          is_active?: boolean
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          display_name?: string
+          id?: string
+          is_active?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
       p2p_orders: {
         Row: {
           amount: number
           created_at: string | null
           currency: string
           id: string
+          local_currency: string
           matched_user_id: string | null
           order_type: string
           payment_details: string | null
@@ -177,6 +202,7 @@ export type Database = {
           created_at?: string | null
           currency?: string
           id?: string
+          local_currency?: string
           matched_user_id?: string | null
           order_type: string
           payment_details?: string | null
@@ -191,6 +217,7 @@ export type Database = {
           created_at?: string | null
           currency?: string
           id?: string
+          local_currency?: string
           matched_user_id?: string | null
           order_type?: string
           payment_details?: string | null
@@ -199,6 +226,30 @@ export type Database = {
           status?: string
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      p2p_settings: {
+        Row: {
+          currency: string
+          id: string
+          is_active: boolean
+          updated_at: string | null
+          usdt_price: number
+        }
+        Insert: {
+          currency: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string | null
+          usdt_price: number
+        }
+        Update: {
+          currency?: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string | null
+          usdt_price?: number
         }
         Relationships: []
       }
@@ -289,6 +340,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_payment_methods: {
+        Row: {
+          account_name: string
+          account_number: string
+          created_at: string | null
+          id: string
+          method_name: string
+          user_id: string
+        }
+        Insert: {
+          account_name: string
+          account_number: string
+          created_at?: string | null
+          id?: string
+          method_name: string
+          user_id: string
+        }
+        Update: {
+          account_name?: string
+          account_number?: string
+          created_at?: string | null
+          id?: string
+          method_name?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {

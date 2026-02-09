@@ -131,19 +131,26 @@ const UserDashboard = () => {
     }
   };
 
+  const WITHDRAWAL_FEE = 1; // $1 USDT fee
+
   const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!withdrawAmount || Number(withdrawAmount) <= 0) return;
+    const amt = Number(withdrawAmount);
+    if (!withdrawAmount || amt <= 0) return;
+    if (amt + WITHDRAWAL_FEE > walletBalance) {
+      toast({ title: "Insufficient balance", description: `You need at least $${(amt + WITHDRAWAL_FEE).toFixed(2)} USDT (including $${WITHDRAWAL_FEE} fee).`, variant: "destructive" });
+      return;
+    }
     setSubmitting(true);
     try {
       const { error } = await supabase.from("withdrawals").insert({
         user_id: user.id,
-        amount: Number(withdrawAmount),
+        amount: amt,
         method: withdrawMethod,
         destination: withdrawDest,
       });
       if (error) throw error;
-      toast({ title: "Withdrawal requested!", description: "Pending admin approval." });
+      toast({ title: "Withdrawal requested!", description: `$${amt} USDT (+ $${WITHDRAWAL_FEE} fee) pending admin approval.` });
       setWithdrawAmount("");
       setWithdrawDest("");
     } catch (err: any) {
@@ -399,9 +406,10 @@ const UserDashboard = () => {
           <div className="max-w-lg">
             <div className="glass-card p-6">
               <h3 className="font-display font-semibold text-foreground mb-2">Withdraw USDT</h3>
-              <p className="text-sm text-muted-foreground mb-6">
+              <p className="text-sm text-muted-foreground mb-2">
                 Available: <span className="text-primary font-semibold">{fmt(walletBalance)}</span>
               </p>
+              <p className="text-xs text-accent mb-6">⚠ A $1 USDT withdrawal fee applies to every withdrawal.</p>
 
               <form onSubmit={handleWithdraw} className="space-y-4">
                 <div>
