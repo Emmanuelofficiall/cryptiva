@@ -135,15 +135,17 @@ const TasksCenter = () => {
 
     // Check if all exchanges are now claimed — record daily earning
     if (newClaimed.size === exchanges.length) {
-      await supabase.from("daily_earnings").insert({
+      const { error: earnError } = await supabase.from("daily_earnings").insert({
         user_id: user!.id,
         amount: totalDailyIncome,
         investment_id: activeInvestments[0]?.id || null,
       });
+      if (earnError) console.error("daily_earnings insert error:", earnError);
       // Update total_earned on investments
       for (const inv of activeInvestments) {
         const invReward = (Number(inv.amount) * Number(inv.daily_rate) / 100);
-        await supabase.from("investments").update({ total_earned: Number(inv.total_earned || 0) + invReward }).eq("id", inv.id);
+        const { error: invError } = await supabase.from("investments").update({ total_earned: Number(inv.total_earned || 0) + invReward }).eq("id", inv.id);
+        if (invError) console.error("investments update error:", invError);
       }
       toast({ title: "🎉 All tasks completed!", description: `Daily income of $${totalDailyIncome.toFixed(2)} USDT has been credited!` });
     } else {
