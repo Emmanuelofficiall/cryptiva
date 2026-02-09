@@ -8,7 +8,8 @@ import { Navigate } from "react-router-dom";
 import {
   Loader2, ShoppingCart, Tag, Plus, X, CheckCircle, CreditCard,
   User, Phone, Wallet, ArrowRight, Shield, ArrowLeftRight, Search,
-  BarChart3, Image, ListOrdered, TrendingUp, Store, Copy, Globe, Smartphone, Building2
+  BarChart3, Image, ListOrdered, TrendingUp, Store, Copy, Globe, Smartphone, Building2,
+  AlertTriangle, Send, MessageSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 
-type Tab = "market" | "my-orders" | "my-trades" | "payment" | "gallery" | "orders" | "trades" | "earnings" | "merchant";
+type Tab = "market" | "my-orders" | "my-trades" | "payment" | "gallery" | "orders" | "trades" | "earnings" | "merchant" | "transfer";
 type TradeFilter = "all" | "completed" | "pending" | "cancelled";
 
 const P2P = () => {
@@ -40,6 +41,12 @@ const P2P = () => {
   const [convertDirection, setConvertDirection] = useState<"to-local" | "to-usdt">("to-local");
   const [tradeFilter, setTradeFilter] = useState<TradeFilter>("all");
   const [galleryRegion, setGalleryRegion] = useState<"africa" | "international" | "asia">("africa");
+  const [disputeOrderId, setDisputeOrderId] = useState<string | null>(null);
+  const [disputeReason, setDisputeReason] = useState("Payment not received");
+  const [disputeDesc, setDisputeDesc] = useState("");
+  const [transferEmail, setTransferEmail] = useState("");
+  const [transferAmount, setTransferAmount] = useState("");
+  const [transferNote, setTransferNote] = useState("");
 
   const { data: currencies } = useQuery({
     queryKey: ["p2p-currencies"],
@@ -98,6 +105,33 @@ const P2P = () => {
     queryFn: async () => {
       const { data } = await supabase.from("user_payment_methods").select("*").eq("user_id", selectedMerchant!.user_id);
       return data || [];
+    },
+  });
+
+  const { data: myDisputes } = useQuery({
+    queryKey: ["my-disputes", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase.from("p2p_disputes").select("*").order("created_at", { ascending: false });
+      return data || [];
+    },
+  });
+
+  const { data: myTransfers } = useQuery({
+    queryKey: ["my-transfers", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase.from("internal_transfers").select("*").or(`sender_user_id.eq.${user!.id},recipient_user_id.eq.${user!.id}`).order("created_at", { ascending: false });
+      return data || [];
+    },
+  });
+
+  const { data: myProfile } = useQuery({
+    queryKey: ["my-profile-p2p", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase.from("profiles").select("wallet_balance").eq("user_id", user!.id).maybeSingle();
+      return data;
     },
   });
 
@@ -291,6 +325,72 @@ const P2P = () => {
     }
   };
 
+  const submitDispute = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!disputeOrderId) return;
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from("p2p_disputes").insert({
+        order_id: disputeOrderId,
+        reporter_user_id: user.id,
+        reason: disputeReason,
+        description: disputeDesc || null,
+      });
+      if (error) throw error;
+      // Mark order as disputed
+      await supabase.from("p2p_orders").update({ status: "disputed" }).eq("id", disputeOrderId);
+      toast({ title: "Dispute submitted!", description: "An admin will review your dispute shortly." });
+      setDisputeOrderId(null);
+      setDisputeReason("Payment not received");
+      setDisputeDesc("");
+      qc.invalidateQueries({ queryKey: ["my-p2p-orders"] });
+      qc.invalidateQueries({ queryKey: ["my-disputes"] });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleInternalTransfer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!transferEmail || !transferAmount) return;
+    setSubmitting(true);
+    try {
+      // Find recipient by email
+      const { data: recipientProfile } = await supabase.from("profiles").select("user_id, full_name").eq("email", transferEmail).maybeSingle();
+      if (!recipientProfile) { toast({ title: "User not found", description: "No user with that email exists.", variant: "destructive" }); return; }
+      if (recipientProfile.user_id === user.id) { toast({ title: "Cannot transfer to yourself", variant: "destructive" }); return; }
+      const amount = Number(transferAmount);
+      const balance = Number(myProfile?.wallet_balance || 0);
+      if (amount > balance) { toast({ title: "Insufficient balance", description: `Your balance is ${balance} USDT.`, variant: "destructive" }); return; }
+
+      // Deduct from sender
+      await supabase.from("profiles").update({ wallet_balance: balance - amount }).eq("user_id", user.id);
+      // Credit recipient
+      const { data: recProfile } = await supabase.from("profiles").select("wallet_balance").eq("user_id", recipientProfile.user_id).maybeSingle();
+      await supabase.from("profiles").update({ wallet_balance: Number(recProfile?.wallet_balance || 0) + amount }).eq("user_id", recipientProfile.user_id);
+      // Record transfer
+      const { error } = await supabase.from("internal_transfers").insert({
+        sender_user_id: user.id,
+        recipient_user_id: recipientProfile.user_id,
+        amount,
+        note: transferNote || null,
+      });
+      if (error) throw error;
+      toast({ title: "Transfer successful!", description: `${amount} USDT sent to ${recipientProfile.full_name || transferEmail}.` });
+      setTransferEmail("");
+      setTransferAmount("");
+      setTransferNote("");
+      qc.invalidateQueries({ queryKey: ["my-transfers"] });
+      qc.invalidateQueries({ queryKey: ["my-profile-p2p"] });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
     { key: "market", label: "Market", icon: ShoppingCart },
     { key: "my-orders", label: "My Orders", icon: ListOrdered },
@@ -300,7 +400,10 @@ const P2P = () => {
     { key: "orders", label: "Orders", icon: Wallet },
     { key: "trades", label: "Trades", icon: BarChart3 },
     { key: "earnings", label: "Earnings", icon: TrendingUp },
-    ...(isMerchant ? [{ key: "merchant" as Tab, label: "Merchant", icon: Store }] : []),
+    ...(isMerchant ? [
+      { key: "merchant" as Tab, label: "Merchant", icon: Store },
+      { key: "transfer" as Tab, label: "Transfer", icon: Send },
+    ] : []),
   ];
 
   const myTrades = myOrders?.filter((o) => o.status === "completed") || [];
@@ -592,6 +695,15 @@ const P2P = () => {
                             )}
                             {o.user_id === user.id && o.status === "open" && (
                               <Button size="sm" variant="outline" onClick={() => cancelOrder(o.id)} className="border-destructive text-destructive h-8 text-xs">Cancel</Button>
+                            )}
+                            {/* Dispute button for active non-completed trades */}
+                            {o.status !== "completed" && o.status !== "cancelled" && o.status !== "open" && o.status !== "disputed" && (
+                              <Button size="sm" variant="outline" onClick={() => setDisputeOrderId(o.id)} className="border-destructive text-destructive h-8 text-xs gap-1">
+                                <AlertTriangle className="w-3 h-3" /> Dispute
+                              </Button>
+                            )}
+                            {o.status === "disputed" && (
+                              <span className="text-xs font-semibold px-2 py-1 rounded-full bg-destructive/10 text-destructive">⚠️ Disputed</span>
                             )}
                           </div>
                         </div>
@@ -1001,6 +1113,104 @@ const P2P = () => {
                 </Button>
               </form>
             </div>
+          </div>
+        )}
+
+        {/* TRANSFER TAB - Merchants internal USDT transfer */}
+        {tab === "transfer" && isMerchant && (
+          <div className="max-w-lg mx-auto">
+            <div className="glass-card p-6 glow-green">
+              <h3 className="font-display font-semibold text-foreground mb-2 flex items-center gap-2">
+                <Send className="w-5 h-5 text-primary" /> Internal USDT Transfer
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">Send USDT to another user on the platform</p>
+              <div className="bg-secondary rounded-xl p-4 mb-4 text-center">
+                <p className="text-xs text-muted-foreground">Your Balance</p>
+                <p className="text-2xl font-display font-bold text-foreground">{Number(myProfile?.wallet_balance || 0).toLocaleString()} USDT</p>
+              </div>
+              <form onSubmit={handleInternalTransfer} className="space-y-4">
+                <div>
+                  <Label className="text-foreground text-sm">Recipient Email</Label>
+                  <Input type="email" value={transferEmail} onChange={(e) => setTransferEmail(e.target.value)} placeholder="user@example.com" className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground" required />
+                </div>
+                <div>
+                  <Label className="text-foreground text-sm">Amount (USDT)</Label>
+                  <Input type="number" value={transferAmount} onChange={(e) => setTransferAmount(e.target.value)} placeholder="e.g. 50" className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground" required min="1" />
+                </div>
+                <div>
+                  <Label className="text-foreground text-sm">Note (optional)</Label>
+                  <Input value={transferNote} onChange={(e) => setTransferNote(e.target.value)} placeholder="Payment for..." className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground" />
+                </div>
+                <Button type="submit" disabled={submitting} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 glow-green">
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+                  Send USDT
+                </Button>
+              </form>
+
+              {/* Transfer history */}
+              {myTransfers && myTransfers.length > 0 && (
+                <div className="mt-6">
+                  <h4 className="text-sm font-semibold text-foreground mb-3">Transfer History</h4>
+                  <div className="space-y-2">
+                    {myTransfers.map((t: any) => (
+                      <div key={t.id} className="bg-secondary rounded-lg p-3 flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-foreground font-medium">
+                            {t.sender_user_id === user.id ? "Sent" : "Received"} {Number(t.amount).toLocaleString()} USDT
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {t.sender_user_id === user.id ? `To: ${getName(t.recipient_user_id)}` : `From: ${getName(t.sender_user_id)}`}
+                          </p>
+                          {t.note && <p className="text-xs text-muted-foreground mt-1">"{t.note}"</p>}
+                        </div>
+                        <p className="text-xs text-muted-foreground">{new Date(t.created_at).toLocaleDateString()}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Dispute Modal */}
+        {disputeOrderId && (
+          <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-card p-8 max-w-md w-full">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-destructive" /> Report Dispute
+                </h3>
+                <button onClick={() => setDisputeOrderId(null)} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
+              </div>
+              <form onSubmit={submitDispute} className="space-y-4">
+                <div>
+                  <Label className="text-foreground text-sm">Reason</Label>
+                  <select value={disputeReason} onChange={(e) => setDisputeReason(e.target.value)} className="mt-1.5 w-full rounded-lg bg-secondary border border-border text-foreground p-2.5 text-sm">
+                    <option>Payment not received</option>
+                    <option>Wrong amount sent</option>
+                    <option>Merchant unresponsive</option>
+                    <option>USDT not released</option>
+                    <option>Fraudulent activity</option>
+                    <option>Other</option>
+                  </select>
+                </div>
+                <div>
+                  <Label className="text-foreground text-sm">Description</Label>
+                  <textarea
+                    value={disputeDesc}
+                    onChange={(e) => setDisputeDesc(e.target.value)}
+                    placeholder="Describe the issue in detail..."
+                    className="mt-1.5 w-full rounded-lg bg-secondary border border-border text-foreground p-2.5 text-sm min-h-[100px] placeholder:text-muted-foreground"
+                    required
+                  />
+                </div>
+                <Button type="submit" disabled={submitting} className="w-full bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <AlertTriangle className="w-4 h-4 mr-2" />}
+                  Submit Dispute
+                </Button>
+              </form>
+            </motion.div>
           </div>
         )}
 
