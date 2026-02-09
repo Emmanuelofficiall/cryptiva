@@ -135,16 +135,20 @@ const TasksCenter = () => {
 
     // Check if all exchanges are now claimed — record daily earning
     if (newClaimed.size === exchanges.length) {
-      const { error: earnError } = await supabase.from("daily_earnings").insert({
-        user_id: user!.id,
-        amount: totalDailyIncome,
-        investment_id: activeInvestments[0]?.id || null,
-      });
-      if (earnError) console.error("daily_earnings insert error:", earnError);
-      // Update total_earned on investments
+      // Record daily earnings per investment
       for (const inv of activeInvestments) {
         const invReward = (Number(inv.amount) * Number(inv.daily_rate) / 100);
-        const { error: invError } = await supabase.from("investments").update({ total_earned: Number(inv.total_earned || 0) + invReward }).eq("id", inv.id);
+        const { error: earnError } = await supabase.from("daily_earnings").insert({
+          user_id: user!.id,
+          amount: invReward,
+          investment_id: inv.id,
+        });
+        if (earnError) console.error("daily_earnings insert error:", earnError);
+        
+        // Fetch latest total_earned to avoid stale data
+        const { data: latestInv } = await supabase.from("investments").select("total_earned").eq("id", inv.id).maybeSingle();
+        const currentEarned = Number(latestInv?.total_earned || 0);
+        const { error: invError } = await supabase.from("investments").update({ total_earned: currentEarned + invReward }).eq("id", inv.id);
         if (invError) console.error("investments update error:", invError);
       }
       toast({ title: "🎉 All tasks completed!", description: `Daily income of $${totalDailyIncome.toFixed(2)} USDT has been credited!` });
