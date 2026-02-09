@@ -26,6 +26,7 @@ const P2P = () => {
   const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>("market");
   const [selectedMerchant, setSelectedMerchant] = useState<any>(null);
+  const [selectedOrderType, setSelectedOrderType] = useState<"buy" | "sell">("buy");
   const [buyAmount, setBuyAmount] = useState("");
   const [sellAmount, setSellAmount] = useState("");
   const [selectedCurrency, setSelectedCurrency] = useState("RWF");
@@ -510,6 +511,8 @@ const P2P = () => {
                               if (orderMerchant) {
                                 setSelectedMerchant(orderMerchant);
                                 setSelectedCurrency(o.local_currency);
+                                // If merchant is BUYING, user SELLs. If merchant is SELLING, user BUYs.
+                                setSelectedOrderType(o.order_type === "buy" ? "sell" : "buy");
                               }
                             }}
                             className={`h-8 text-xs ${
@@ -549,50 +552,67 @@ const P2P = () => {
                 <button onClick={() => setSelectedMerchant(null)} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
               </div>
 
-              {/* Merchant payment details with copy buttons */}
+              {/* Merchant payment details with separate copy for name and number */}
               {merchantPayments && merchantPayments.length > 0 && (
                 <div className="bg-secondary rounded-xl p-4 mb-4">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Payment Details — Click to copy</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Payment Details</p>
                   {merchantPayments.map((pm) => (
-                    <div key={pm.id} className="flex items-center justify-between text-sm py-2 border-b border-border/30 last:border-0">
-                      <div>
-                        <span className="text-muted-foreground">{pm.method_name}</span>
-                        <p className="text-foreground font-medium">{pm.account_name} — {pm.account_number}</p>
+                    <div key={pm.id} className="py-3 border-b border-border/30 last:border-0">
+                      <p className="text-xs text-muted-foreground mb-1">{pm.method_name}</p>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm text-foreground">Name: <span className="font-medium">{pm.account_name}</span></span>
+                        <Button size="sm" variant="ghost" onClick={() => copyToClipboard(pm.account_name, "Account Name")} className="h-7 px-2 text-primary hover:text-primary text-xs gap-1">
+                          <Copy className="w-3 h-3" /> Copy
+                        </Button>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => copyToClipboard(pm.account_number, pm.method_name)}
-                        className="h-8 px-2 text-primary hover:text-primary"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-foreground">Number: <span className="font-medium">{pm.account_number}</span></span>
+                        <Button size="sm" variant="ghost" onClick={() => copyToClipboard(pm.account_number, "Account Number")} className="h-7 px-2 text-primary hover:text-primary text-xs gap-1">
+                          <Copy className="w-3 h-3" /> Copy
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
 
-              <form onSubmit={handleBuy} className="space-y-4 mb-4">
-                <div>
-                  <Label className="text-foreground text-sm">Buy Amount (USDT)</Label>
-                  <Input type="number" value={buyAmount} onChange={(e) => setBuyAmount(e.target.value)} placeholder="e.g. 50" className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground" required min="1" />
-                  {buyAmount && <p className="text-xs text-primary mt-1">You'll pay: {selectedCurrency} {(Number(buyAmount) * getPrice()).toLocaleString()}</p>}
-                </div>
-                <Button type="submit" disabled={submitting} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 glow-green">
-                  {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}Buy USDT
-                </Button>
-              </form>
+              {/* Show only Buy form when user wants to buy */}
+              {selectedOrderType === "buy" && (
+                <form onSubmit={handleBuy} className="space-y-4">
+                  <div>
+                    <Label className="text-foreground text-sm">Buy Amount (USDT)</Label>
+                    <Input type="number" value={buyAmount} onChange={(e) => setBuyAmount(e.target.value)} placeholder="e.g. 50" className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground" required min="1" />
+                    {buyAmount && (
+                      <div className="mt-2 bg-primary/10 rounded-lg p-3">
+                        <p className="text-sm font-semibold text-primary">Amount to send: {selectedCurrency} {(Number(buyAmount) * getPrice()).toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground mt-1">Send this exact amount to the merchant's payment method above</p>
+                      </div>
+                    )}
+                  </div>
+                  <Button type="submit" disabled={submitting} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 glow-green">
+                    {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <ShoppingCart className="w-4 h-4 mr-2" />}Buy USDT
+                  </Button>
+                </form>
+              )}
 
-              <form onSubmit={handleSell} className="space-y-4">
-                <div>
-                  <Label className="text-foreground text-sm">Sell Amount (USDT)</Label>
-                  <Input type="number" value={sellAmount} onChange={(e) => setSellAmount(e.target.value)} placeholder="e.g. 50" className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground" required min="1" />
-                  {sellAmount && <p className="text-xs text-accent mt-1">You'll receive: {selectedCurrency} {(Number(sellAmount) * getPrice()).toLocaleString()}</p>}
-                </div>
-                <Button type="submit" disabled={submitting} className="w-full bg-accent text-accent-foreground hover:bg-accent/90 glow-gold">
-                  {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}Sell USDT
-                </Button>
-              </form>
+              {/* Show only Sell form when user wants to sell */}
+              {selectedOrderType === "sell" && (
+                <form onSubmit={handleSell} className="space-y-4">
+                  <div>
+                    <Label className="text-foreground text-sm">Sell Amount (USDT)</Label>
+                    <Input type="number" value={sellAmount} onChange={(e) => setSellAmount(e.target.value)} placeholder="e.g. 50" className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground" required min="1" />
+                    {sellAmount && (
+                      <div className="mt-2 bg-accent/10 rounded-lg p-3">
+                        <p className="text-sm font-semibold text-accent">You'll receive: {selectedCurrency} {(Number(sellAmount) * getPrice()).toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground mt-1">The merchant will send this amount to your payment method</p>
+                      </div>
+                    )}
+                  </div>
+                  <Button type="submit" disabled={submitting} className="w-full bg-accent text-accent-foreground hover:bg-accent/90 glow-gold">
+                    {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Tag className="w-4 h-4 mr-2" />}Sell USDT
+                  </Button>
+                </form>
+              )}
             </div>
           </div>
         )}
