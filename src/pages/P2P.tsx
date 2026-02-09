@@ -8,7 +8,7 @@ import { Navigate } from "react-router-dom";
 import {
   Loader2, ShoppingCart, Tag, Plus, X, CheckCircle, CreditCard,
   User, Phone, Wallet, ArrowRight, Shield, ArrowLeftRight, Search,
-  BarChart3, Image, ListOrdered, TrendingUp, Store
+  BarChart3, Image, ListOrdered, TrendingUp, Store, Copy
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,19 +29,15 @@ const P2P = () => {
   const [selectedCurrency, setSelectedCurrency] = useState("RWF");
   const [submitting, setSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  // Merchant order form
   const [merchantOrderType, setMerchantOrderType] = useState<"buy" | "sell">("buy");
   const [merchantOrderAmount, setMerchantOrderAmount] = useState("");
-  // Payment method form
   const [showAddPM, setShowAddPM] = useState(false);
   const [pmAccName, setPmAccName] = useState("");
   const [pmAccNum, setPmAccNum] = useState("");
   const [pmMethod, setPmMethod] = useState("MTN MoMo");
-  // Currency converter
   const [convertAmount, setConvertAmount] = useState("");
   const [convertDirection, setConvertDirection] = useState<"to-local" | "to-usdt">("to-local");
 
-  // Queries
   const { data: currencies } = useQuery({
     queryKey: ["p2p-currencies"],
     queryFn: async () => {
@@ -58,6 +54,7 @@ const P2P = () => {
     },
   });
 
+  // Only fetch merchant orders (orders created by active merchants)
   const { data: openOrders } = useQuery({
     queryKey: ["open-p2p-orders"],
     queryFn: async () => {
@@ -121,17 +118,26 @@ const P2P = () => {
 
   const isMerchant = merchants?.some((m) => m.user_id === user.id);
 
-  // Filter open orders by search
+  // Only show orders from merchants who have active orders
+  const merchantUserIds = new Set(merchants?.map((m) => m.user_id) || []);
   const filteredOrders = openOrders?.filter((o) => {
+    // Only merchant orders appear in market
+    if (!merchantUserIds.has(o.user_id)) return false;
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
       o.local_currency.toLowerCase().includes(q) ||
       o.payment_method.toLowerCase().includes(q) ||
       o.currency.toLowerCase().includes(q) ||
-      o.order_type.toLowerCase().includes(q)
+      o.order_type.toLowerCase().includes(q) ||
+      getMerchantName(o.user_id).toLowerCase().includes(q)
     );
   });
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: "Copied!", description: `${label} copied to clipboard.` });
+  };
 
   // Buy USDT from merchant
   const handleBuy = async (e: React.FormEvent) => {
@@ -162,7 +168,6 @@ const P2P = () => {
     }
   };
 
-  // Sell USDT to merchant
   const handleSell = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedMerchant || !sellAmount) return;
@@ -290,6 +295,14 @@ const P2P = () => {
   const myTrades = myOrders?.filter((o) => o.status === "completed") || [];
   const myActiveOrders = myOrders?.filter((o) => o.user_id === user.id && o.status !== "completed" && o.status !== "cancelled") || [];
 
+  // Earnings calculation
+  const totalP2PEarnings = myTrades.reduce((sum, t) => {
+    // For buy trades, user bought USDT. For sell trades, user sold USDT.
+    return sum + Number(t.amount);
+  }, 0);
+  const buyTrades = myTrades.filter((t) => t.order_type === "buy");
+  const sellTrades = myTrades.filter((t) => t.order_type === "sell");
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -305,7 +318,7 @@ const P2P = () => {
           </p>
         </div>
 
-        {/* Tabs - horizontal scrollable */}
+        {/* Tabs */}
         <div className="mb-6 overflow-x-auto scrollbar-hide">
           <div className="flex gap-1 min-w-max">
             {tabs.map((t) => (
@@ -324,10 +337,9 @@ const P2P = () => {
           </div>
         </div>
 
-        {/* MARKET TAB */}
+        {/* MARKET TAB - Only merchant orders */}
         {tab === "market" && !selectedMerchant && (
           <div>
-            {/* Search bar */}
             <div className="relative mb-6">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
@@ -338,7 +350,6 @@ const P2P = () => {
               />
             </div>
 
-            {/* Orders list */}
             {(!filteredOrders || filteredOrders.length === 0) ? (
               <div className="glass-card p-16 text-center">
                 <p className="text-muted-foreground">No orders available at the moment</p>
@@ -365,7 +376,7 @@ const P2P = () => {
                         )}
                         <div>
                           <p className="font-semibold text-foreground text-sm">{getMerchantName(o.user_id)}</p>
-                          <p className="text-xs text-muted-foreground">{o.payment_method}</p>
+                          <p className="text-xs text-muted-foreground">{o.payment_method} • Verified Merchant</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-6">
@@ -382,9 +393,8 @@ const P2P = () => {
                           <Button
                             size="sm"
                             onClick={() => {
-                              const m = merchants?.find((m) => m.user_id === o.user_id);
-                              if (m) {
-                                setSelectedMerchant(m);
+                              if (orderMerchant) {
+                                setSelectedMerchant(orderMerchant);
                                 setSelectedCurrency(o.local_currency);
                               }
                             }}
@@ -406,7 +416,7 @@ const P2P = () => {
           </div>
         )}
 
-        {/* Selected merchant - Buy form */}
+        {/* Selected merchant - Buy/Sell form */}
         {tab === "market" && selectedMerchant && (
           <div className="max-w-lg mx-auto">
             <div className="glass-card p-6 glow-green">
@@ -425,19 +435,29 @@ const P2P = () => {
                 <button onClick={() => setSelectedMerchant(null)} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
               </div>
 
+              {/* Merchant payment details with copy buttons */}
               {merchantPayments && merchantPayments.length > 0 && (
                 <div className="bg-secondary rounded-xl p-4 mb-4">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Payment Details</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Payment Details — Click to copy</p>
                   {merchantPayments.map((pm) => (
-                    <div key={pm.id} className="flex justify-between text-sm py-1">
-                      <span className="text-muted-foreground">{pm.method_name}</span>
-                      <span className="text-foreground font-medium">{pm.account_name} — {pm.account_number}</span>
+                    <div key={pm.id} className="flex items-center justify-between text-sm py-2 border-b border-border/30 last:border-0">
+                      <div>
+                        <span className="text-muted-foreground">{pm.method_name}</span>
+                        <p className="text-foreground font-medium">{pm.account_name} — {pm.account_number}</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => copyToClipboard(pm.account_number, pm.method_name)}
+                        className="h-8 px-2 text-primary hover:text-primary"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
                     </div>
                   ))}
                 </div>
               )}
 
-              {/* Buy form */}
               <form onSubmit={handleBuy} className="space-y-4 mb-4">
                 <div>
                   <Label className="text-foreground text-sm">Buy Amount (USDT)</Label>
@@ -449,7 +469,6 @@ const P2P = () => {
                 </Button>
               </form>
 
-              {/* Sell form */}
               <form onSubmit={handleSell} className="space-y-4">
                 <div>
                   <Label className="text-foreground text-sm">Sell Amount (USDT)</Label>
@@ -565,7 +584,7 @@ const P2P = () => {
           </div>
         )}
 
-        {/* PAYMENT TAB */}
+        {/* PAYMENT TAB with copy functionality */}
         {tab === "payment" && (
           <div className="max-w-2xl">
             <div className="flex items-center justify-between mb-6">
@@ -623,7 +642,17 @@ const P2P = () => {
                         <p className="text-xs text-muted-foreground">{pm.account_name} — {pm.account_number}</p>
                       </div>
                     </div>
-                    <Button size="sm" variant="outline" onClick={() => deletePaymentMethod(pm.id)} className="border-destructive text-destructive h-8 text-xs">Remove</Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => copyToClipboard(pm.account_number, pm.method_name)}
+                        className="h-8 px-2 text-primary hover:text-primary"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => deletePaymentMethod(pm.id)} className="border-destructive text-destructive h-8 text-xs">Remove</Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -638,7 +667,7 @@ const P2P = () => {
           </div>
         )}
 
-        {/* ORDERS TAB - all user's open orders */}
+        {/* ORDERS TAB */}
         {tab === "orders" && (
           <div className="glass-card overflow-hidden">
             <div className="p-5 border-b border-border">
@@ -676,8 +705,60 @@ const P2P = () => {
 
         {/* EARNINGS TAB */}
         {tab === "earnings" && (
-          <div className="glass-card p-12 text-center text-muted-foreground">
-            P2P earnings tracking coming soon.
+          <div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+              <div className="glass-card p-5 text-center">
+                <TrendingUp className="w-6 h-6 text-primary mx-auto mb-2" />
+                <p className="text-2xl font-display font-bold text-foreground">{totalP2PEarnings.toLocaleString()} USDT</p>
+                <p className="text-xs text-muted-foreground">Total Volume Traded</p>
+              </div>
+              <div className="glass-card p-5 text-center">
+                <ShoppingCart className="w-6 h-6 text-primary mx-auto mb-2" />
+                <p className="text-2xl font-display font-bold text-foreground">{buyTrades.length}</p>
+                <p className="text-xs text-muted-foreground">Buy Trades</p>
+              </div>
+              <div className="glass-card p-5 text-center">
+                <Tag className="w-6 h-6 text-accent mx-auto mb-2" />
+                <p className="text-2xl font-display font-bold text-foreground">{sellTrades.length}</p>
+                <p className="text-xs text-muted-foreground">Sell Trades</p>
+              </div>
+            </div>
+
+            <div className="glass-card overflow-hidden">
+              <div className="p-5 border-b border-border">
+                <h3 className="font-display font-semibold text-foreground">Trade History</h3>
+              </div>
+              {myTrades.length === 0 ? (
+                <div className="p-12 text-center text-muted-foreground">No completed trades yet.</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left text-xs text-muted-foreground font-medium p-4">Type</th>
+                        <th className="text-left text-xs text-muted-foreground font-medium p-4">Amount</th>
+                        <th className="text-left text-xs text-muted-foreground font-medium p-4">Local Value</th>
+                        <th className="text-left text-xs text-muted-foreground font-medium p-4">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {myTrades.map((t) => (
+                        <tr key={t.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                          <td className="p-4">
+                            <span className={`text-xs font-semibold px-2 py-1 rounded-full ${t.order_type === "buy" ? "bg-primary/10 text-primary" : "bg-accent/10 text-accent"}`}>
+                              {t.order_type.toUpperCase()}
+                            </span>
+                          </td>
+                          <td className="p-4 text-sm text-foreground font-semibold">{Number(t.amount).toLocaleString()} USDT</td>
+                          <td className="p-4 text-sm text-muted-foreground">{t.local_currency} {(Number(t.amount) * Number(t.price_per_unit)).toLocaleString()}</td>
+                          <td className="p-4 text-sm text-muted-foreground">{new Date(t.created_at!).toLocaleDateString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
