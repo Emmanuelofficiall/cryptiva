@@ -26,7 +26,7 @@ const UserDashboard = () => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<DashTab>("overview");
   const [depositAmount, setDepositAmount] = useState("");
-  const [depositRef, setDepositRef] = useState("");
+  
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [withdrawDest, setWithdrawDest] = useState("");
   const [withdrawMethod, setWithdrawMethod] = useState("TRC20 USDT");
@@ -108,22 +108,29 @@ const UserDashboard = () => {
     toast({ title: "Copied!", description: "Copied to clipboard." });
   };
 
+  const generateInvoiceNumber = () => {
+    const prefix = "INV";
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `${prefix}-${timestamp}-${random}`;
+  };
+
   const handleDeposit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!depositAmount || Number(depositAmount) <= 0) return;
     setSubmitting(true);
     try {
+      const invoiceNumber = generateInvoiceNumber();
       const { error } = await supabase.from("deposits").insert({
         user_id: user.id,
         amount: Number(depositAmount),
         method: "TRC20 USDT",
-        transaction_ref: depositRef,
+        transaction_ref: invoiceNumber,
         currency: "USDT",
       });
       if (error) throw error;
-      toast({ title: "Deposit submitted!", description: "Pending admin approval." });
+      toast({ title: "Deposit submitted!", description: `Invoice: ${invoiceNumber}. Pending admin approval.` });
       setDepositAmount("");
-      setDepositRef("");
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
@@ -388,10 +395,7 @@ const UserDashboard = () => {
                   <Label className="text-foreground text-sm">Amount (USDT)</Label>
                   <Input type="number" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} placeholder="Enter amount in USDT" className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground" required />
                 </div>
-                <div>
-                  <Label className="text-foreground text-sm">Transaction Reference / ID</Label>
-                  <Input value={depositRef} onChange={(e) => setDepositRef(e.target.value)} placeholder="Enter transaction ID or hash" className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground" required />
-                </div>
+                <p className="text-xs text-muted-foreground mt-2">An invoice number will be auto-generated for your deposit.</p>
                 <Button type="submit" disabled={submitting} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 glow-green">
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                   Submit Deposit
