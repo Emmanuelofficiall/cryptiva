@@ -89,8 +89,11 @@ const Plans = () => {
       });
       if (error) throw error;
 
-      // Handle referral commissions
-      await handleReferralCommission(selectedPlan.invest);
+      // Handle referral commissions server-side
+      await supabase.rpc("process_referral_commission", {
+        _investor_id: user.id,
+        _invest_amount: selectedPlan.invest,
+      });
 
       toast({ title: "Investment Created!", description: `$${selectedPlan.invest} USDT deducted. You're now earning $${selectedPlan.dailyIncome}/day.` });
       setSelectedPlan(null);
@@ -101,63 +104,6 @@ const Plans = () => {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const handleReferralCommission = async (investAmount: number) => {
-    if (!user) return;
-    try {
-      // Get current user's profile to find who referred them
-      const { data: myProfile } = await supabase.from("profiles").select("referred_by").eq("user_id", user.id).single();
-      if (!myProfile?.referred_by) return;
-
-      // Level A - Direct referrer (5%)
-      const { data: referrerProfile } = await supabase.from("profiles").select("id, user_id, referred_by, wallet_balance").eq("id", myProfile.referred_by).single();
-      if (referrerProfile) {
-        const commA = investAmount * 0.05;
-        await supabase.from("referral_commissions").insert({
-          user_id: referrerProfile.user_id,
-          from_user_id: user.id,
-          level: "A",
-          rate: 5,
-          amount: commA,
-        });
-        await supabase.from("profiles").update({ wallet_balance: Number(referrerProfile.wallet_balance || 0) + commA }).eq("id", referrerProfile.id);
-
-        // Level B - Referrer's referrer (3%)
-        if (referrerProfile.referred_by) {
-          const { data: lvlB } = await supabase.from("profiles").select("id, user_id, referred_by, wallet_balance").eq("id", referrerProfile.referred_by).single();
-          if (lvlB) {
-            const commB = investAmount * 0.03;
-            await supabase.from("referral_commissions").insert({
-              user_id: lvlB.user_id,
-              from_user_id: user.id,
-              level: "B",
-              rate: 3,
-              amount: commB,
-            });
-            await supabase.from("profiles").update({ wallet_balance: Number(lvlB.wallet_balance || 0) + commB }).eq("id", lvlB.id);
-
-            // Level C (1%)
-            if (lvlB.referred_by) {
-              const { data: lvlC } = await supabase.from("profiles").select("id, user_id, wallet_balance").eq("id", lvlB.referred_by).single();
-              if (lvlC) {
-                const commC = investAmount * 0.01;
-                await supabase.from("referral_commissions").insert({
-                  user_id: lvlC.user_id,
-                  from_user_id: user.id,
-                  level: "C",
-                  rate: 1,
-                  amount: commC,
-                });
-                await supabase.from("profiles").update({ wallet_balance: Number(lvlC.wallet_balance || 0) + commC }).eq("id", lvlC.id);
-              }
-            }
-          }
-        }
-      }
-    } catch (err) {
-      console.error("Referral commission error:", err);
     }
   };
 

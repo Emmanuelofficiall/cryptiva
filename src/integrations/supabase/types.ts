@@ -474,6 +474,10 @@ export type Database = {
         Args: { new_user_id: string; referrer_code: string }
         Returns: undefined
       }
+      process_referral_commission: {
+        Args: { _invest_amount: number; _investor_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
