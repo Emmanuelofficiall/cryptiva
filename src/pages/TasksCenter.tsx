@@ -184,15 +184,17 @@ const TasksCenter = () => {
           </div>
         </div>
 
-        {activeInvestments.length === 0 && (
-          <div className="glass-card p-6 text-center mb-8 border-accent/30">
-            <p className="text-sm text-muted-foreground mb-3">You need an active plan to earn from daily tasks.</p>
+        {activeInvestments.length === 0 ? (
+          <div className="glass-card p-8 text-center border-accent/30">
+            <Sparkles className="w-10 h-10 text-accent mx-auto mb-4" />
+            <h2 className="text-xl font-display font-bold text-foreground mb-2">No Active Plan</h2>
+            <p className="text-sm text-muted-foreground mb-5">You need to purchase an investment plan to unlock daily tasks and start earning.</p>
             <Button onClick={() => window.location.href = "/plans"} className="bg-primary text-primary-foreground hover:bg-primary/90">
               <Sparkles className="w-4 h-4 mr-2" /> Browse Plans
             </Button>
           </div>
-        )}
-
+        ) : (
+        <>
         {/* Exchange Pairs with Candlestick Charts */}
         <div className="space-y-4">
           {exchanges.map((ex) => {
@@ -250,6 +252,8 @@ const TasksCenter = () => {
             Tasks reset daily. Your daily income is based on your active investment plan.
           </p>
         </div>
+        </>
+        )}
       </div>
       <Footer />
     </div>
