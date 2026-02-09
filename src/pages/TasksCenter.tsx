@@ -7,8 +7,30 @@ import { Navigate } from "react-router-dom";
 import { CheckCircle, Clock, Loader2, Gift, TrendingUp, TrendingDown, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import CandlestickChart from "@/components/CandlestickChart";
+
+const useCountdownToMidnight = () => {
+  const getTimeLeft = useCallback(() => {
+    const now = new Date();
+    const midnight = new Date(now);
+    midnight.setHours(24, 0, 0, 0);
+    const diff = midnight.getTime() - now.getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    return { hours, minutes, seconds };
+  }, []);
+
+  const [timeLeft, setTimeLeft] = useState(getTimeLeft);
+
+  useEffect(() => {
+    const interval = setInterval(() => setTimeLeft(getTimeLeft()), 1000);
+    return () => clearInterval(interval);
+  }, [getTimeLeft]);
+
+  return timeLeft;
+};
 
 const exchanges = [
   { name: "BTC/USDT", icon: "₿", buy: 67842.50, sell: 67838.20 },
@@ -22,6 +44,7 @@ const TasksCenter = () => {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const countdown = useCountdownToMidnight();
   const [claimedExchanges, setClaimedExchanges] = useState<Set<string>>(new Set());
 
   const { data: tasks, isLoading: tasksLoading } = useQuery({
@@ -272,10 +295,27 @@ const TasksCenter = () => {
         </div>
 
         <div className="glass-card p-4 mt-6 text-center">
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground mb-2">
             <Clock className="w-3 h-3 inline mr-1" />
-            Tasks reset daily. Your daily income is based on your active investment plan.
+            Tasks reset daily at midnight. Your daily income is based on your active investment plan.
           </p>
+          <div className="flex items-center justify-center gap-3 mt-2">
+            <div className="bg-secondary rounded-lg px-3 py-1.5 min-w-[48px]">
+              <p className="text-lg font-display font-bold text-foreground">{String(countdown.hours).padStart(2, '0')}</p>
+              <p className="text-[10px] text-muted-foreground">HRS</p>
+            </div>
+            <span className="text-muted-foreground font-bold">:</span>
+            <div className="bg-secondary rounded-lg px-3 py-1.5 min-w-[48px]">
+              <p className="text-lg font-display font-bold text-foreground">{String(countdown.minutes).padStart(2, '0')}</p>
+              <p className="text-[10px] text-muted-foreground">MIN</p>
+            </div>
+            <span className="text-muted-foreground font-bold">:</span>
+            <div className="bg-secondary rounded-lg px-3 py-1.5 min-w-[48px]">
+              <p className="text-lg font-display font-bold text-foreground">{String(countdown.seconds).padStart(2, '0')}</p>
+              <p className="text-[10px] text-muted-foreground">SEC</p>
+            </div>
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-2">until next reset</p>
         </div>
         </>
         )}
