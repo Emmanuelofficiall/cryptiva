@@ -35,14 +35,23 @@ const AdminP2PPanel = ({ profiles }: { profiles: any[] }) => {
     return p?.full_name || p?.email || userId.slice(0, 8);
   };
 
-  const releaseUsdt = async (orderId: string, buyerUserId: string, amount: number) => {
+  const releaseUsdt = async (orderId: string, buyerUserId: string, sellerUserId: string, amount: number) => {
     const { error } = await supabase.from("p2p_orders").update({ status: "completed" }).eq("id", orderId);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+
+    // Credit buyer
     const { data: buyerProfile } = await supabase.from("profiles").select("wallet_balance").eq("user_id", buyerUserId).maybeSingle();
     if (buyerProfile) {
       await supabase.from("profiles").update({ wallet_balance: Number(buyerProfile.wallet_balance || 0) + amount }).eq("user_id", buyerUserId);
     }
-    toast({ title: "USDT Released!", description: `${amount} USDT credited to ${getName(buyerUserId)}.` });
+
+    // Deduct seller
+    const { data: sellerProfile } = await supabase.from("profiles").select("wallet_balance").eq("user_id", sellerUserId).maybeSingle();
+    if (sellerProfile) {
+      await supabase.from("profiles").update({ wallet_balance: Math.max(0, Number(sellerProfile.wallet_balance || 0) - amount) }).eq("user_id", sellerUserId);
+    }
+
+    toast({ title: "USDT Released!", description: `${amount} USDT credited to ${getName(buyerUserId)} and deducted from ${getName(sellerUserId)}.` });
     qc.invalidateQueries({ queryKey: ["admin-p2p-orders"] });
   };
 
@@ -63,8 +72,9 @@ const AdminP2PPanel = ({ profiles }: { profiles: any[] }) => {
     if (action === "release") {
       const order = allOrders?.find((o) => o.id === orderId);
       if (order) {
-        const buyerUserId = order.order_type === "buy" ? order.user_id : order.matched_user_id;
-        if (buyerUserId) await releaseUsdt(orderId, buyerUserId, Number(order.amount));
+        const buyerUserId = order.order_type === "buy" ? order.user_id : (order.matched_user_id || order.user_id);
+        const sellerUserId = order.order_type === "sell" ? order.user_id : (order.matched_user_id || order.user_id);
+        if (buyerUserId && sellerUserId) await releaseUsdt(orderId, buyerUserId, sellerUserId, Number(order.amount));
       }
     } else {
       await supabase.from("p2p_orders").update({ status: "cancelled" }).eq("id", orderId);
@@ -131,7 +141,11 @@ const AdminP2PPanel = ({ profiles }: { profiles: any[] }) => {
                       <td className="p-3 sm:p-4">
                         {["pending_payment", "payment_sent", "disputed"].includes(o.status) && (
                           <div className="flex gap-1.5 flex-wrap">
-                            <Button size="sm" onClick={() => releaseUsdt(o.id, o.order_type === "buy" ? o.user_id : (o.matched_user_id || o.user_id), Number(o.amount))}
+                            <Button size="sm" onClick={() => {
+                              const buyerUserId = o.order_type === "buy" ? o.user_id : (o.matched_user_id || o.user_id);
+                              const sellerUserId = o.order_type === "sell" ? o.user_id : (o.matched_user_id || o.user_id);
+                              releaseUsdt(o.id, buyerUserId, sellerUserId, Number(o.amount));
+                            }}
                               className="bg-primary text-primary-foreground h-7 text-[11px] gap-1">
                               <CheckCircle className="w-3 h-3" /> Release
                             </Button>
