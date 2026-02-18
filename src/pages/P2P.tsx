@@ -150,6 +150,16 @@ const P2P = () => {
     return m?.display_name || getName(userId);
   };
 
+  const getBuyPrice = (currency?: string) => {
+    const c = currencies?.find((c) => c.currency === (currency || selectedCurrency));
+    return c ? Number(c.buy_price || c.usdt_price) : 0;
+  };
+
+  const getSellPrice = (currency?: string) => {
+    const c = currencies?.find((c) => c.currency === (currency || selectedCurrency));
+    return c ? Number(c.sell_price || c.usdt_price) : 0;
+  };
+
   const getPrice = (currency?: string) => {
     const c = currencies?.find((c) => c.currency === (currency || selectedCurrency));
     return c ? Number(c.usdt_price) : 0;
@@ -192,14 +202,14 @@ const P2P = () => {
         user_id: user.id,
         order_type: "buy",
         amount: Number(buyAmount),
-        price_per_unit: getPrice(),
+        price_per_unit: getBuyPrice(),
         payment_method: selectedCurrency,
         local_currency: selectedCurrency,
         matched_user_id: selectedMerchant.user_id,
         status: "pending_payment",
       });
       if (error) throw error;
-      toast({ title: "Buy order created!", description: `Send ${selectedCurrency} ${(Number(buyAmount) * getPrice()).toLocaleString()} to the merchant, then confirm payment in My Orders.` });
+      toast({ title: "Buy order created!", description: `Send ${selectedCurrency} ${(Number(buyAmount) * getBuyPrice()).toLocaleString()} to the merchant, then confirm payment in My Orders.` });
       setBuyAmount("");
       setSelectedMerchant(null);
       qc.invalidateQueries({ queryKey: ["my-p2p-orders"] });
@@ -224,7 +234,7 @@ const P2P = () => {
         user_id: user.id,
         order_type: "sell",
         amount: Number(sellAmount),
-        price_per_unit: getPrice(),
+        price_per_unit: getSellPrice(),
         payment_method: selectedCurrency,
         local_currency: selectedCurrency,
         matched_user_id: selectedMerchant.user_id,
@@ -310,7 +320,7 @@ const P2P = () => {
         user_id: user.id,
         order_type: merchantOrderType,
         amount: Number(merchantOrderAmount),
-        price_per_unit: getPrice(),
+        price_per_unit: merchantOrderType === "buy" ? getBuyPrice() : getSellPrice(),
         payment_method: selectedCurrency,
         local_currency: selectedCurrency,
         status: "open",
@@ -585,7 +595,7 @@ const P2P = () => {
                     <Input type="number" value={buyAmount} onChange={(e) => setBuyAmount(e.target.value)} placeholder="e.g. 50" className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground" min="1" />
                     {buyAmount && (
                       <div className="mt-2 bg-primary/10 rounded-lg p-3">
-                        <p className="text-sm font-semibold text-primary">Amount to send: {selectedCurrency} {(Number(buyAmount) * getPrice()).toLocaleString()}</p>
+                        <p className="text-sm font-semibold text-primary">Amount to send: {selectedCurrency} {(Number(buyAmount) * getBuyPrice()).toLocaleString()}</p>
                         <p className="text-xs text-muted-foreground mt-1">Send this exact amount to the merchant's payment method above</p>
                       </div>
                     )}
@@ -604,7 +614,7 @@ const P2P = () => {
                     <Input type="number" value={sellAmount} onChange={(e) => setSellAmount(e.target.value)} placeholder="e.g. 50" className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground" min="1" />
                     {sellAmount && (
                       <div className="mt-2 bg-accent/10 rounded-lg p-3">
-                        <p className="text-sm font-semibold text-accent">You'll receive: {selectedCurrency} {(Number(sellAmount) * getPrice()).toLocaleString()}</p>
+                        <p className="text-sm font-semibold text-accent">You'll receive: {selectedCurrency} {(Number(sellAmount) * getSellPrice()).toLocaleString()}</p>
                         <p className="text-xs text-muted-foreground mt-1">The merchant will send this amount to your payment method</p>
                       </div>
                     )}
@@ -1266,11 +1276,11 @@ const P2P = () => {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Rate</span>
-                  <span className="text-foreground">{selectedCurrency} {getPrice().toLocaleString()}/USDT</span>
+                  <span className="text-foreground">{selectedCurrency} {(showConfirm.type === "buy" ? getBuyPrice() : getSellPrice()).toLocaleString()}/USDT</span>
                 </div>
                 <div className="flex justify-between text-sm border-t border-border pt-2">
                   <span className="text-muted-foreground font-semibold">{showConfirm.type === "buy" ? "You pay" : "You receive"}</span>
-                  <span className="text-foreground font-bold">{selectedCurrency} {(Number(showConfirm.amount) * getPrice()).toLocaleString()}</span>
+                  <span className="text-foreground font-bold">{selectedCurrency} {(Number(showConfirm.amount) * (showConfirm.type === "buy" ? getBuyPrice() : getSellPrice())).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Merchant</span>

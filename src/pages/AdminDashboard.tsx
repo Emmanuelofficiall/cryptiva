@@ -402,6 +402,33 @@ const P2PSettingsPanel = ({ settings, refetch }: { settings: any[]; refetch: () 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editBuyPrice, setEditBuyPrice] = useState("");
   const [editSellPrice, setEditSellPrice] = useState("");
+  const [newCurrency, setNewCurrency] = useState("");
+  const [newBuyPrice, setNewBuyPrice] = useState("");
+  const [newSellPrice, setNewSellPrice] = useState("");
+  const [adding, setAdding] = useState(false);
+
+  const addCurrency = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCurrency || !newBuyPrice || !newSellPrice) return;
+    if (Number(newBuyPrice) >= Number(newSellPrice)) {
+      toast({ title: "Invalid prices", description: "Buy price must be less than sell price.", variant: "destructive" });
+      return;
+    }
+    if (settings.some(s => s.currency.toLowerCase() === newCurrency.trim().toUpperCase().toLowerCase())) {
+      toast({ title: "Currency exists", description: "This currency is already configured.", variant: "destructive" });
+      return;
+    }
+    setAdding(true);
+    const { error } = await supabase.from("p2p_settings").insert({
+      currency: newCurrency.trim().toUpperCase(),
+      buy_price: Number(newBuyPrice),
+      sell_price: Number(newSellPrice),
+      usdt_price: Number(newBuyPrice),
+    });
+    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+    else { toast({ title: "Currency added!" }); setNewCurrency(""); setNewBuyPrice(""); setNewSellPrice(""); refetch(); }
+    setAdding(false);
+  };
 
   const updatePrices = async (id: string) => {
     if (Number(editBuyPrice) >= Number(editSellPrice)) {
@@ -419,43 +446,68 @@ const P2PSettingsPanel = ({ settings, refetch }: { settings: any[]; refetch: () 
   };
 
   return (
-    <div className="glass-card overflow-hidden">
-      <div className="p-5 border-b border-border"><h3 className="font-display font-semibold text-foreground">USDT Buy & Sell Prices Per Currency</h3></div>
-      <div className="divide-y divide-border/50">
-        {settings.map((s) => (
-          <div key={s.id} className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <p className="text-sm font-semibold text-foreground">{s.currency}</p>
-                <p className="text-xs text-muted-foreground">Last updated: {new Date(s.updated_at).toLocaleDateString()}</p>
+    <div>
+      {/* Add new currency */}
+      <div className="glass-card p-6 mb-6">
+        <h3 className="font-display font-semibold text-foreground mb-4">Add New Currency</h3>
+        <form onSubmit={addCurrency} className="flex flex-col sm:flex-row gap-3 items-end">
+          <div>
+            <Label className="text-xs text-muted-foreground">Currency Code</Label>
+            <Input value={newCurrency} onChange={(e) => setNewCurrency(e.target.value)} placeholder="e.g. RWF" className="w-28 bg-secondary border-border text-foreground placeholder:text-muted-foreground text-sm h-9 mt-1" required />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Buy Price</Label>
+            <Input type="number" step="any" value={newBuyPrice} onChange={(e) => setNewBuyPrice(e.target.value)} placeholder="e.g. 1400" className="w-32 bg-secondary border-border text-foreground placeholder:text-muted-foreground text-sm h-9 mt-1" required />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Sell Price</Label>
+            <Input type="number" step="any" value={newSellPrice} onChange={(e) => setNewSellPrice(e.target.value)} placeholder="e.g. 1450" className="w-32 bg-secondary border-border text-foreground placeholder:text-muted-foreground text-sm h-9 mt-1" required />
+          </div>
+          <Button type="submit" disabled={adding} className="bg-primary text-primary-foreground hover:bg-primary/90 h-9 text-xs gap-2">
+            <Plus className="w-4 h-4" /> Add
+          </Button>
+        </form>
+      </div>
+
+      {/* Existing currencies */}
+      <div className="glass-card overflow-hidden">
+        <div className="p-5 border-b border-border"><h3 className="font-display font-semibold text-foreground">USDT Buy & Sell Prices Per Currency</h3></div>
+        <div className="divide-y divide-border/50">
+          {settings.map((s) => (
+            <div key={s.id} className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{s.currency}</p>
+                  <p className="text-xs text-muted-foreground">Last updated: {new Date(s.updated_at).toLocaleDateString()}</p>
+                </div>
+                {editingId !== s.id && (
+                  <Button size="sm" variant="outline" onClick={() => { setEditingId(s.id); setEditBuyPrice(String(s.buy_price || s.usdt_price)); setEditSellPrice(String(s.sell_price || s.usdt_price)); }} className="h-8 text-xs">Edit</Button>
+                )}
               </div>
-              {editingId !== s.id && (
-                <Button size="sm" variant="outline" onClick={() => { setEditingId(s.id); setEditBuyPrice(String(s.buy_price || s.usdt_price)); setEditSellPrice(String(s.sell_price || s.usdt_price)); }} className="h-8 text-xs">Edit</Button>
+              {editingId === s.id ? (
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mt-3">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs text-muted-foreground w-10">Buy:</Label>
+                    <Input type="number" step="any" value={editBuyPrice} onChange={(e) => setEditBuyPrice(e.target.value)} className="w-32 bg-secondary border-border text-foreground text-sm h-8" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs text-muted-foreground w-10">Sell:</Label>
+                    <Input type="number" step="any" value={editSellPrice} onChange={(e) => setEditSellPrice(e.target.value)} className="w-32 bg-secondary border-border text-foreground text-sm h-8" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => updatePrices(s.id)} className="bg-primary text-primary-foreground h-8 text-xs">Save</Button>
+                    <Button size="sm" variant="outline" onClick={() => setEditingId(null)} className="h-8 text-xs">Cancel</Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-6 mt-1">
+                  <span className="text-sm"><span className="text-muted-foreground">Buy:</span> <span className="font-bold text-primary">{Number(s.buy_price || s.usdt_price).toLocaleString()}</span></span>
+                  <span className="text-sm"><span className="text-muted-foreground">Sell:</span> <span className="font-bold text-accent">{Number(s.sell_price || s.usdt_price).toLocaleString()}</span></span>
+                </div>
               )}
             </div>
-            {editingId === s.id ? (
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mt-3">
-                <div className="flex items-center gap-2">
-                  <Label className="text-xs text-muted-foreground w-10">Buy:</Label>
-                  <Input type="number" step="any" value={editBuyPrice} onChange={(e) => setEditBuyPrice(e.target.value)} className="w-32 bg-secondary border-border text-foreground text-sm h-8" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Label className="text-xs text-muted-foreground w-10">Sell:</Label>
-                  <Input type="number" step="any" value={editSellPrice} onChange={(e) => setEditSellPrice(e.target.value)} className="w-32 bg-secondary border-border text-foreground text-sm h-8" />
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={() => updatePrices(s.id)} className="bg-primary text-primary-foreground h-8 text-xs">Save</Button>
-                  <Button size="sm" variant="outline" onClick={() => setEditingId(null)} className="h-8 text-xs">Cancel</Button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex gap-6 mt-1">
-                <span className="text-sm"><span className="text-muted-foreground">Buy:</span> <span className="font-bold text-green-400">{Number(s.buy_price || s.usdt_price).toLocaleString()}</span></span>
-                <span className="text-sm"><span className="text-muted-foreground">Sell:</span> <span className="font-bold text-red-400">{Number(s.sell_price || s.usdt_price).toLocaleString()}</span></span>
-              </div>
-            )}
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
