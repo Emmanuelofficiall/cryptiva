@@ -508,7 +508,10 @@ const P2P = () => {
                       <div className="flex items-center gap-6">
                         <div className="text-right">
                           <p className="text-sm font-semibold text-foreground">{Number(o.amount).toLocaleString()} USDT</p>
-                          <p className="text-xs text-muted-foreground">{o.local_currency} {Number(o.price_per_unit).toLocaleString()}/USDT</p>
+                          <div className="flex gap-3 text-xs text-muted-foreground">
+                            <span className="text-primary">Buy: {o.local_currency} {getBuyPrice(o.local_currency).toLocaleString()}</span>
+                            <span className="text-accent">Sell: {o.local_currency} {getSellPrice(o.local_currency).toLocaleString()}</span>
+                          </div>
                         </div>
                         <span className={`text-xs font-semibold px-3 py-1 rounded-full ${
                           o.order_type === "buy" ? "bg-primary/10 text-primary" : "bg-accent/10 text-accent"
