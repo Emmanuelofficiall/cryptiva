@@ -228,12 +228,21 @@ const P2P = () => {
       toast({ title: "Add payment method first", description: "Go to the Payment tab to add your payment method before trading.", variant: "destructive" });
       return;
     }
+    const amount = Number(sellAmount);
+    const balance = Number(myProfile?.wallet_balance || 0);
+    if (amount > balance) {
+      toast({ title: "Insufficient USDT balance", description: `You only have ${balance} USDT in your wallet.`, variant: "destructive" });
+      return;
+    }
     setSubmitting(true);
     try {
+      // Deduct USDT from seller immediately
+      await supabase.from("profiles").update({ wallet_balance: balance - amount }).eq("user_id", user.id);
+
       const { error } = await supabase.from("p2p_orders").insert({
         user_id: user.id,
         order_type: "sell",
-        amount: Number(sellAmount),
+        amount,
         price_per_unit: getSellPrice(),
         payment_method: selectedCurrency,
         local_currency: selectedCurrency,
@@ -241,11 +250,12 @@ const P2P = () => {
         status: "pending_payment",
       });
       if (error) throw error;
-      toast({ title: "Sell order created!", description: "Verify your payment details in My Orders before proceeding." });
+      toast({ title: "Sell order created!", description: `${amount} USDT held from your wallet. Verify payment in My Orders.` });
       setSellAmount("");
       setSelectedMerchant(null);
       qc.invalidateQueries({ queryKey: ["my-p2p-orders"] });
       qc.invalidateQueries({ queryKey: ["open-p2p-orders"] });
+      qc.invalidateQueries({ queryKey: ["my-profile-p2p"] });
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
@@ -259,27 +269,60 @@ const P2P = () => {
     else { toast({ title: "Payment confirmed!" }); qc.invalidateQueries({ queryKey: ["my-p2p-orders"] }); }
   };
 
-  const releaseUsdt = async (orderId: string, buyerUserId: string, amount: number) => {
+  const releaseUsdt = async (orderId: string, buyerUserId: string, sellerUserId: string, amount: number) => {
     const { error } = await supabase.from("p2p_orders").update({ status: "completed" }).eq("id", orderId);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+
+    // Credit buyer
     const { data: buyerProfile } = await supabase.from("profiles").select("wallet_balance").eq("user_id", buyerUserId).maybeSingle();
     if (buyerProfile) {
       await supabase.from("profiles").update({ wallet_balance: Number(buyerProfile.wallet_balance || 0) + amount }).eq("user_id", buyerUserId);
     }
-    toast({ title: "USDT Released!", description: `${amount} USDT credited to buyer's wallet.` });
+
+    // Deduct seller (merchant)
+    const { data: sellerProfile } = await supabase.from("profiles").select("wallet_balance").eq("user_id", sellerUserId).maybeSingle();
+    if (sellerProfile) {
+      await supabase.from("profiles").update({ wallet_balance: Math.max(0, Number(sellerProfile.wallet_balance || 0) - amount) }).eq("user_id", sellerUserId);
+    }
+
+    toast({ title: "USDT Released!", description: `${amount} USDT credited to buyer and deducted from seller.` });
     qc.invalidateQueries({ queryKey: ["my-p2p-orders"] });
+    qc.invalidateQueries({ queryKey: ["my-profile-p2p"] });
   };
 
-  const releaseUsdtSell = async (orderId: string, merchantUserId: string, amount: number) => {
+  const releaseUsdtSell = async (orderId: string, buyerUserId: string, amount: number) => {
     const { error } = await supabase.from("p2p_orders").update({ status: "completed" }).eq("id", orderId);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
-    toast({ title: "USDT Released!", description: `${amount} USDT released to merchant.` });
+
+    // USDT was already deducted from seller at order creation, now credit buyer (merchant)
+    const { data: buyerProfile } = await supabase.from("profiles").select("wallet_balance").eq("user_id", buyerUserId).maybeSingle();
+    if (buyerProfile) {
+      await supabase.from("profiles").update({ wallet_balance: Number(buyerProfile.wallet_balance || 0) + amount }).eq("user_id", buyerUserId);
+    }
+
+    toast({ title: "USDT Released!", description: `${amount} USDT credited to merchant.` });
     qc.invalidateQueries({ queryKey: ["my-p2p-orders"] });
+    qc.invalidateQueries({ queryKey: ["my-profile-p2p"] });
   };
 
   const cancelOrder = async (orderId: string) => {
+    // Find the order first to check if we need to refund held USDT
+    const order = myOrders?.find((o) => o.id === orderId);
+    
     const { error } = await supabase.from("p2p_orders").delete().eq("id", orderId);
-    if (!error) { toast({ title: "Order Cancelled" }); qc.invalidateQueries({ queryKey: ["my-p2p-orders"] }); qc.invalidateQueries({ queryKey: ["open-p2p-orders"] }); }
+    if (!error) {
+      // Refund held USDT for sell orders
+      if (order && order.order_type === "sell") {
+        const { data: sellerProfile } = await supabase.from("profiles").select("wallet_balance").eq("user_id", order.user_id).maybeSingle();
+        if (sellerProfile) {
+          await supabase.from("profiles").update({ wallet_balance: Number(sellerProfile.wallet_balance || 0) + Number(order.amount) }).eq("user_id", order.user_id);
+        }
+      }
+      toast({ title: "Order Cancelled" });
+      qc.invalidateQueries({ queryKey: ["my-p2p-orders"] });
+      qc.invalidateQueries({ queryKey: ["open-p2p-orders"] });
+      qc.invalidateQueries({ queryKey: ["my-profile-p2p"] });
+    }
   };
 
   const addPaymentMethod = async (e: React.FormEvent) => {
@@ -314,22 +357,40 @@ const P2P = () => {
   const handleMerchantOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!merchantOrderAmount) return;
+    const amount = Number(merchantOrderAmount);
+
+    // Merchants must have enough USDT to create a sell order
+    if (merchantOrderType === "sell") {
+      const balance = Number(myProfile?.wallet_balance || 0);
+      if (amount > balance) {
+        toast({ title: "Insufficient USDT balance", description: `You only have ${balance} USDT. You need at least ${amount} USDT to create a sell order.`, variant: "destructive" });
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
+      // If selling, hold the USDT from merchant's balance
+      if (merchantOrderType === "sell") {
+        const balance = Number(myProfile?.wallet_balance || 0);
+        await supabase.from("profiles").update({ wallet_balance: balance - amount }).eq("user_id", user.id);
+      }
+
       const { error } = await supabase.from("p2p_orders").insert({
         user_id: user.id,
         order_type: merchantOrderType,
-        amount: Number(merchantOrderAmount),
+        amount,
         price_per_unit: merchantOrderType === "buy" ? getBuyPrice() : getSellPrice(),
         payment_method: selectedCurrency,
         local_currency: selectedCurrency,
         status: "open",
       });
       if (error) throw error;
-      toast({ title: "Order created!", description: `Your ${merchantOrderType} order for ${merchantOrderAmount} USDT is now live.` });
+      toast({ title: "Order created!", description: `Your ${merchantOrderType} order for ${merchantOrderAmount} USDT is now live.${merchantOrderType === "sell" ? ` ${amount} USDT held from your wallet.` : ""}` });
       setMerchantOrderAmount("");
       qc.invalidateQueries({ queryKey: ["my-p2p-orders"] });
       qc.invalidateQueries({ queryKey: ["open-p2p-orders"] });
+      qc.invalidateQueries({ queryKey: ["my-profile-p2p"] });
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
@@ -706,7 +767,7 @@ const P2P = () => {
                               <span className="text-xs text-muted-foreground bg-secondary px-3 py-1.5 rounded-full">⏳ Waiting for buyer to send payment</span>
                             )}
                             {isMerchantOnBuy && o.status === "payment_sent" && (
-                              <Button size="sm" onClick={() => releaseUsdt(o.id, o.user_id, Number(o.amount))} className="bg-primary text-primary-foreground h-8 text-xs">
+                              <Button size="sm" onClick={() => releaseUsdt(o.id, o.user_id, o.matched_user_id || user.id, Number(o.amount))} className="bg-primary text-primary-foreground h-8 text-xs">
                                 <CheckCircle className="w-3 h-3 mr-1" /> Verify Payment Received & Release USDT
                               </Button>
                             )}
@@ -1062,7 +1123,7 @@ const P2P = () => {
                                 <span className="text-xs text-muted-foreground bg-secondary px-3 py-1.5 rounded-full">⏳ Waiting for buyer to pay</span>
                               )}
                               {isMerchantOnBuy && o.status === "payment_sent" && (
-                                <Button size="sm" onClick={() => releaseUsdt(o.id, o.user_id, Number(o.amount))} className="bg-primary text-primary-foreground h-8 text-xs">
+                                <Button size="sm" onClick={() => releaseUsdt(o.id, o.user_id, o.matched_user_id || user.id, Number(o.amount))} className="bg-primary text-primary-foreground h-8 text-xs">
                                   <CheckCircle className="w-3 h-3 mr-1" /> Confirm Received & Release USDT
                                 </Button>
                               )}
