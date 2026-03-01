@@ -16,6 +16,7 @@ import TasksCenter from "./pages/TasksCenter";
 import P2P from "./pages/P2P";
 import NotFound from "./pages/NotFound";
 import LiveChat from "./components/LiveChat";
+import WhatsAppButton from "./components/WhatsAppButton";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
           <LiveChat />
+          <WhatsAppButton />
         </BrowserRouter>
       </AuthProvider>
     </TooltipProvider>
