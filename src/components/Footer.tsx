@@ -19,7 +19,17 @@ const Footer = () => {
             <Link to="/referral" className="hover:text-foreground transition-colors">Referral</Link>
             <Link to="/login" className="hover:text-foreground transition-colors">Login</Link>
           </div>
-          <p className="text-xs text-muted-foreground">© 2026 Cryptiva. All rights reserved.</p>
+          <div className="flex items-center gap-4">
+            <a
+              href="https://whatsapp.com/channel/0029VbCWHlJ3gvWgPLWB8U0M"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors font-medium"
+            >
+              📱 WhatsApp Channel
+            </a>
+            <p className="text-xs text-muted-foreground">© 2026 Cryptiva. All rights reserved.</p>
+          </div>
         </div>
       </div>
     </footer>
