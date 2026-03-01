@@ -1226,9 +1226,16 @@ const P2P = () => {
         {tab === "merchant" && isMerchant && (
           <div className="max-w-lg mx-auto">
             <div className="glass-card p-6 glow-green">
-              <h3 className="font-display font-semibold text-foreground mb-6 flex items-center gap-2">
+              <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
                 <Shield className="w-5 h-5 text-primary" /> Create P2P Order
               </h3>
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary border border-border mb-6">
+                <Wallet className="w-5 h-5 text-primary shrink-0" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Available USDT Balance</p>
+                  <p className="text-lg font-display font-bold text-foreground">{Number(myProfile?.wallet_balance || 0).toLocaleString()} USDT</p>
+                </div>
+              </div>
               <div className="flex gap-2 mb-6">
                 <Button type="button" onClick={() => setMerchantOrderType("buy")}
                   className={`flex-1 ${merchantOrderType === "buy" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>
