@@ -37,15 +37,15 @@ const Footer = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-8">
             {pageLinks.map(({ to, label, icon: Icon }) => (
               <Link
                 key={to}
                 to={to}
-                className="group flex flex-col items-center justify-center gap-2 rounded-2xl border border-blue-400/30 bg-[#2f7cf6] px-4 py-3 text-center text-white shadow-[0_10px_30px_rgba(47,124,246,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3a87ff] hover:shadow-[0_12px_28px_rgba(47,124,246,0.35)]"
+                className="group flex min-h-[72px] min-w-[110px] flex-col items-center justify-center gap-1.5 rounded-xl border border-[#5da4ff]/35 bg-[#3a7ae5] px-3 py-2 text-center text-white shadow-[0_8px_20px_rgba(58,122,229,0.22)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#4a88f3] hover:shadow-[0_10px_22px_rgba(58,122,229,0.3)]"
               >
-                <Icon className="h-5 w-5 transition-transform duration-200 group-hover:scale-110" />
-                <span className="text-xs font-semibold tracking-wide uppercase">{label}</span>
+                <Icon className="h-4 w-4 transition-transform duration-200 group-hover:scale-110" />
+                <span className="text-[10px] font-semibold tracking-[0.08em] uppercase">{label}</span>
               </Link>
             ))}
           </div>
