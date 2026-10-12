@@ -1,15 +1,15 @@
-import { DollarSign } from "lucide-react";
+import { DollarSign, Home, Landmark, Users, Gift, LayoutDashboard, ListTodo, ShieldCheck, LogIn } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const pageLinks = [
-  { to: "/", label: "Home" },
-  { to: "/plans", label: "Plans" },
-  { to: "/p2p", label: "P2P" },
-  { to: "/referral", label: "Referral" },
-  { to: "/dashboard", label: "Dashboard" },
-  { to: "/tasks", label: "Tasks" },
-  { to: "/admin", label: "Admin" },
-  { to: "/login", label: "Login" },
+  { to: "/", label: "Home", icon: Home },
+  { to: "/plans", label: "Plans", icon: Landmark },
+  { to: "/p2p", label: "P2P", icon: Users },
+  { to: "/referral", label: "Referral", icon: Gift },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/tasks", label: "Tasks", icon: ListTodo },
+  { to: "/admin", label: "Admin", icon: ShieldCheck },
+  { to: "/login", label: "Login", icon: LogIn },
 ];
 
 const Footer = () => {
@@ -37,14 +37,15 @@ const Footer = () => {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            {pageLinks.map(({ to, label }) => (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
+            {pageLinks.map(({ to, label, icon: Icon }) => (
               <Link
                 key={to}
                 to={to}
-                className="inline-flex items-center justify-center rounded-full border border-border bg-background/60 px-4 py-2 text-sm font-medium text-foreground/80 transition-all duration-200 hover:border-primary hover:bg-primary hover:text-primary-foreground shadow-sm"
+                className="group flex flex-col items-center justify-center gap-2 rounded-2xl border border-blue-400/30 bg-[#2f7cf6] px-4 py-3 text-center text-white shadow-[0_10px_30px_rgba(47,124,246,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3a87ff] hover:shadow-[0_12px_28px_rgba(47,124,246,0.35)]"
               >
-                {label}
+                <Icon className="h-5 w-5 transition-transform duration-200 group-hover:scale-110" />
+                <span className="text-xs font-semibold tracking-wide uppercase">{label}</span>
               </Link>
             ))}
           </div>
