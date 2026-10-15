@@ -148,14 +148,13 @@ const UserDashboard = () => {
     }
   };
 
-  const WITHDRAWAL_FEE = 1; // $1 USDT fee
-
   const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
     const amt = Number(withdrawAmount);
     if (!withdrawAmount || amt <= 0) return;
+    const WITHDRAWAL_FEE = Number((amt * 0.1).toFixed(2)); // 10% fee
     if (amt + WITHDRAWAL_FEE > walletBalance) {
-      toast({ title: "Insufficient balance", description: `You need at least $${(amt + WITHDRAWAL_FEE).toFixed(2)} USDT (including $${WITHDRAWAL_FEE} fee).`, variant: "destructive" });
+      toast({ title: "Insufficient balance", description: `You need at least $${(amt + WITHDRAWAL_FEE).toFixed(2)} USDT (including 10% fee of $${WITHDRAWAL_FEE.toFixed(2)}).`, variant: "destructive" });
       return;
     }
     setSubmitting(true);
@@ -489,7 +488,7 @@ const UserDashboard = () => {
               <p className="text-sm text-muted-foreground mb-2">
                 Available: <span className="text-primary font-semibold">{fmt(walletBalance)}</span>
               </p>
-              <p className="text-xs text-accent mb-6">⚠ A $1 USDT withdrawal fee applies to every withdrawal.</p>
+              <p className="text-xs text-accent mb-6">⚠ A 10% withdrawal fee applies to every withdrawal.</p>
 
               <form onSubmit={handleWithdraw} className="space-y-4">
                 <div>

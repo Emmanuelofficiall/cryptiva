@@ -79,7 +79,7 @@ const AdminDashboard = () => {
     if (action === "rejected" && withdrawal) {
       const { data: profile } = await supabase.from("profiles").select("wallet_balance").eq("user_id", withdrawal.user_id).maybeSingle();
       if (profile) {
-        const refundAmount = Number(withdrawal.amount) + 1; // amount + $1 fee
+        const refundAmount = Number(withdrawal.amount) + Number((Number(withdrawal.amount) * 0.1).toFixed(2)); // amount + 10% fee
         await supabase.from("profiles").update({ wallet_balance: Number(profile.wallet_balance || 0) + refundAmount }).eq("user_id", withdrawal.user_id);
       }
     }
