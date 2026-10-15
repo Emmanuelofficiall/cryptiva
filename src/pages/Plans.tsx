@@ -38,26 +38,11 @@ const Plans = () => {
     },
   });
 
-  const { data: activeInvestment } = useQuery({
-    queryKey: ["active-investment", user?.id],
-    enabled: !!user,
-    queryFn: async () => {
-      const { data, error } = await supabase.from("investments").select("*").eq("user_id", user!.id).eq("status", "active").maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-  });
-
   const walletBalance = Number(profile?.wallet_balance || 0);
 
   const handleInvest = async () => {
     if (!user) { navigate("/login"); return; }
     if (!selectedPlan) return;
-
-    if (activeInvestment) {
-      toast({ title: "Active Plan Exists", description: "You already have an active plan. Wait for it to expire before purchasing a new one.", variant: "destructive" });
-      return;
-    }
 
     if (walletBalance < selectedPlan.invest) {
       toast({
@@ -202,16 +187,11 @@ const Plans = () => {
                 <Button
                   onClick={() => {
                     if (!user) { navigate("/login"); return; }
-                    if (activeInvestment) {
-                      toast({ title: "Active Plan Exists", description: "You already have an active plan. Wait for it to expire.", variant: "destructive" });
-                      return;
-                    }
                     setSelectedPlan(plan);
                   }}
-                  disabled={!!activeInvestment}
-                  className={`w-full bg-gradient-to-r ${plan.color} text-white hover:opacity-90 gap-2 font-semibold transition-all ${activeInvestment ? "opacity-50 cursor-not-allowed" : ""}`}
+                  className={`w-full bg-gradient-to-r ${plan.color} text-white hover:opacity-90 gap-2 font-semibold transition-all`}
                 >
-                  <Sparkles className="w-4 h-4" /> {activeInvestment ? "Plan Active" : "Invest Now"}
+                  <Sparkles className="w-4 h-4" /> Invest Now
                 </Button>
               </div>
             </motion.div>
