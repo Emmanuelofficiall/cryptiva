@@ -4,10 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Navigate } from "react-router-dom";
+import { Navigate, Link, useSearchParams } from "react-router-dom";
+import { useEffect } from "react";
+import banner1 from "@/assets/banner-1.jpg";
+import banner2 from "@/assets/banner-2.jpg";
 import {
   Wallet, TrendingUp, ArrowDownCircle, ArrowUpCircle,
-  Copy, Loader2, Calendar, User
+  Copy, Loader2, Calendar, User, Volume2, Layers, ArrowLeftRight, Users
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +28,11 @@ const UserDashboard = () => {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<DashTab>("overview");
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<DashTab>((searchParams.get("tab") as DashTab) || "overview");
+  const [slide, setSlide] = useState(0);
+  useEffect(() => { const t = searchParams.get("tab") as DashTab; setActiveTab(t || "overview"); }, [searchParams]);
+  useEffect(() => { const i = setInterval(() => setSlide((s) => (s + 1) % 2), 4000); return () => clearInterval(i); }, []);
   const [depositAmount, setDepositAmount] = useState("");
   
   const [withdrawAmount, setWithdrawAmount] = useState("");
@@ -225,6 +232,61 @@ const UserDashboard = () => {
         {/* Overview Tab */}
         {activeTab === "overview" && (
           <div>
+            <div className="max-w-3xl mx-auto mb-8 space-y-6">
+              <div className="relative rounded-2xl overflow-hidden aspect-[12/5]">
+                {[{ img: banner1, t: "Grow Your Wealth", s: "Earn daily returns on USDT plans" }, { img: banner2, t: "Trade P2P Instantly", s: "Buy & sell USDT with trusted merchants" }].map((b, i) => (
+                  <div key={i} className={`absolute inset-0 transition-opacity duration-700 ${slide === i ? "opacity-100" : "opacity-0"}`}>
+                    <img src={b.img} alt={b.t} width={1536} height={640} className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
+                    <div className="absolute bottom-5 left-5">
+                      <h2 className="text-xl sm:text-3xl font-display font-bold text-foreground">{b.t}</h2>
+                      <p className="text-sm sm:text-base text-foreground/80">{b.s}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-center gap-2 -mt-3">
+                {[0, 1].map((i) => (
+                  <button key={i} aria-label={`Slide ${i + 1}`} onClick={() => setSlide(i)} className={`h-2.5 rounded-full transition-all ${slide === i ? "w-8 bg-primary" : "w-2.5 bg-muted-foreground/50"}`} />
+                ))}
+              </div>
+              <div className="flex items-center gap-3 rounded-xl border border-border bg-secondary/50 px-4 py-3 overflow-hidden">
+                <Volume2 className="w-5 h-5 text-accent shrink-0" />
+                <div className="overflow-hidden flex-1">
+                  <p className="whitespace-nowrap font-mono text-sm text-muted-foreground animate-ticker">Invest in USDT plans and earn daily returns! Complete daily tasks, invite friends and trade P2P safely on Cryptiva.</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-4 gap-3">
+                {[
+                  { label: "Deposit", icon: ArrowDownCircle, onClick: () => setActiveTab("deposit") },
+                  { label: "Withdraw", icon: ArrowUpCircle, onClick: () => setActiveTab("withdraw") },
+                  { label: "Plans", icon: Layers, to: "/plans" },
+                  { label: "Referral", icon: Users, to: "/referral" },
+                ].map((a) => {
+                  const inner = (
+                    <>
+                      <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl bg-secondary flex items-center justify-center">
+                        <a.icon className="w-7 h-7 sm:w-9 sm:h-9 text-primary" />
+                      </div>
+                      <span className="text-xs sm:text-sm font-semibold text-foreground">{a.label}</span>
+                    </>
+                  );
+                  return a.to ? (
+                    <Link key={a.label} to={a.to} className="flex flex-col items-center gap-2">{inner}</Link>
+                  ) : (
+                    <button key={a.label} onClick={a.onClick} className="flex flex-col items-center gap-2">{inner}</button>
+                  );
+                })}
+              </div>
+              <div className="rounded-2xl p-6 sm:p-8 bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
+                <p className="text-xs sm:text-sm uppercase tracking-widest opacity-90">Account Balance</p>
+                <p className="mt-2 text-4xl sm:text-5xl font-display font-bold">{walletBalance.toFixed(2)} <span className="text-lg sm:text-xl">USDT</span></p>
+                <div className="mt-4 flex gap-6 text-sm opacity-90">
+                  <span>Earned: {fmt(totalEarned)}</span>
+                  <span>Plans: {activeInvestments.length}</span>
+                </div>
+              </div>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-8">
               <div className="glass-card p-6 glow-green">
                 <div className="flex items-center gap-3 mb-3">
