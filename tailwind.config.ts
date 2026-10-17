@@ -13,6 +13,7 @@ export default {
       },
     },
     extend: {
+      gridTemplateColumns: { "15": "repeat(15, minmax(0, 1fr))" },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
         display: ['Space Grotesk', 'sans-serif'],

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { Navigate } from "react-router-dom";
+import { referralRewardProgress } from "@/lib/referral-rewards";
 
 const levels = [
   { level: "A", label: "Direct Referral", rate: "5%", color: "text-primary", desc: "Earn 5% commission on every investment made by people you directly invite." },
@@ -18,6 +19,29 @@ const levels = [
 const Referral = () => {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
+
+  const { data: qualificationCount, isPending: rewardsLoading, error: rewardsError } = useQuery({
+    queryKey: ["referral-qualifications", user?.id],
+    enabled: !!user,
+    refetchInterval: 15000,
+    queryFn: async () => {
+      if (!user) return 0;
+      const { count, error } = await supabase.from("referral_qualifications").select("referred_user_id", { count: "exact", head: true }).eq("referrer_user_id", user.id);
+      if (error) throw error;
+      return count || 0;
+    },
+  });
+  const { data: rewards, error: rewardHistoryError } = useQuery({
+    queryKey: ["referral-rewards", user?.id],
+    enabled: !!user,
+    refetchInterval: 15000,
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase.from("referral_rewards").select("*").eq("user_id", user.id).order("milestone", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],
@@ -86,7 +110,9 @@ const Referral = () => {
 
   const referralCode = profile?.referral_code || "—";
   const referralLink = `${window.location.origin}/login?ref=${referralCode}`;
-  const totalEarnings = commissions?.reduce((s, c) => s + Number(c.amount), 0) || 0;
+  const bonusEarnings = rewards?.reduce((s, reward) => s + Number(reward.amount), 0) || 0;
+  const totalEarnings = (commissions?.reduce((s, c) => s + Number(c.amount), 0) || 0) + bonusEarnings;
+  const rewardProgress = referralRewardProgress(qualificationCount || 0);
   const levelAEarnings = commissions?.filter((c) => c.level === "A").reduce((s, c) => s + Number(c.amount), 0) || 0;
   const levelBEarnings = commissions?.filter((c) => c.level === "B").reduce((s, c) => s + Number(c.amount), 0) || 0;
   const levelCEarnings = commissions?.filter((c) => c.level === "C").reduce((s, c) => s + Number(c.amount), 0) || 0;
@@ -117,6 +143,24 @@ const Referral = () => {
           </h1>
           <p className="text-muted-foreground mt-4 max-w-lg mx-auto">Share your referral code and earn commissions on 3 levels.</p>
         </div>
+
+        <section aria-label="Referral milestone reward" className="border-y border-gold/30 py-6 mb-10">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-display font-bold flex items-center gap-2"><Gift className="w-6 h-6 text-gold" />100 USDT Referral Reward</h2>
+              <p className="text-sm text-muted-foreground mt-2 max-w-xl">Earn 100 USDT for every 15 different friends you directly invite who purchase Solana ($60) or a higher-priced plan. Each friend counts once; rewards repeat at 15, 30, 45 and beyond.</p>
+            </div>
+            <div><p className="text-xs text-muted-foreground">Bonuses credited to wallet</p><p className="text-2xl font-bold text-gold">{bonusEarnings.toLocaleString()} USDT</p></div>
+          </div>
+          {rewardsError || rewardHistoryError ? <p role="alert" className="text-sm text-destructive mt-4">Unable to load reward progress. Please try again.</p> : rewardsLoading ? <Loader2 aria-label="Loading reward progress" className="w-5 h-5 animate-spin mt-4 text-gold" /> : <>
+            <div className="flex flex-wrap justify-between gap-2 text-sm mt-5 mb-2"><span>{qualificationCount || 0} qualifying friends</span><span className="text-gold">{rewardProgress.remaining} more for your next 100 USDT</span></div>
+            <div role="progressbar" aria-label="Next referral bonus" aria-valuemin={0} aria-valuemax={15} aria-valuenow={rewardProgress.currentBatch} className="grid grid-cols-15 gap-1 h-2">
+              {Array.from({ length: 15 }, (_, i) => <span key={i} className={`rounded-sm ${i < rewardProgress.currentBatch ? "bg-gold" : "bg-secondary"}`} />)}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">Next reward at {rewardProgress.nextMilestone} qualifying friends · Automatically added to your wallet</p>
+          </>}
+          {(rewards || []).length > 0 && <div className="mt-4 divide-y divide-border">{rewards?.slice(0, 5).map((reward) => <div key={reward.id} className="flex flex-wrap justify-between gap-2 py-2 text-sm"><span>{reward.milestone} qualifying friends · {new Date(reward.created_at).toLocaleDateString()}</span><span className="text-gold font-semibold">+100 USDT credited</span></div>)}</div>}
+        </section>
 
         {/* Stats Dashboard */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
