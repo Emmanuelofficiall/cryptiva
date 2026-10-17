@@ -424,6 +424,51 @@ export type Database = {
           },
         ]
       }
+      referral_qualifications: {
+        Row: {
+          investment_id: string | null
+          qualified_at: string
+          referred_user_id: string
+          referrer_user_id: string
+        }
+        Insert: {
+          investment_id?: string | null
+          qualified_at?: string
+          referred_user_id: string
+          referrer_user_id: string
+        }
+        Update: {
+          investment_id?: string | null
+          qualified_at?: string
+          referred_user_id?: string
+          referrer_user_id?: string
+        }
+        Relationships: []
+      }
+      referral_rewards: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          milestone: number
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          milestone: number
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          milestone?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_payment_methods: {
         Row: {
           account_name: string
@@ -558,6 +603,7 @@ export type Database = {
         Args: { _invest_amount: number; _investor_id: string }
         Returns: undefined
       }
+      purchase_plan: { Args: { _plan_name: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"

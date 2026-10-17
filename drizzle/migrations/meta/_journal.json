@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1792227401703,
+      "tag": "0000_atomic_plan_purchases_and_repeatable_referral_rewards",
+      "breakpoints": true
+    }
+  ]
+}
