@@ -8,6 +8,8 @@ import { Navigate, Link, useSearchParams } from "react-router-dom";
 import { useEffect } from "react";
 import banner1 from "@/assets/banner-1.jpg";
 import banner2 from "@/assets/banner-2.jpg";
+import banner3 from "@/assets/banner-3.jpg";
+import banner4 from "@/assets/banner-4.jpg";
 import {
   Wallet, TrendingUp, ArrowDownCircle, ArrowUpCircle,
   Copy, Loader2, Calendar, User, Volume2, Layers, ArrowLeftRight, Users
@@ -20,7 +22,13 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from "recharts";
 
-const CRYPTO_ADDRESS = "TGRg61sjXpXeBcUnXmz88YfG2TeMKF9y6n";
+const CRYPTO_ADDRESS = "TCC3Es9hAbjsosuBz7ZhGpzSVCJqLSgFwz";
+const banners = [
+  { img: banner1, t: "Grow Your Wealth", s: "Earn daily returns on USDT plans" },
+  { img: banner2, t: "Trade P2P Instantly", s: "Buy & sell USDT with trusted merchants" },
+  { img: banner3, t: "Your Crypto Portfolio", s: "Explore Bitcoin, Ethereum, Solana and more" },
+  { img: banner4, t: "Invite. Grow. Earn.", s: "100 USDT for every 15 qualifying friends" },
+];
 
 type DashTab = "overview" | "deposit" | "withdraw" | "earnings" | "profile";
 
@@ -32,7 +40,11 @@ const UserDashboard = () => {
   const [activeTab, setActiveTab] = useState<DashTab>((searchParams.get("tab") as DashTab) || "overview");
   const [slide, setSlide] = useState(0);
   useEffect(() => { const t = searchParams.get("tab") as DashTab; setActiveTab(t || "overview"); }, [searchParams]);
-  useEffect(() => { const i = setInterval(() => setSlide((s) => (s + 1) % 2), 4000); return () => clearInterval(i); }, []);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const i = setInterval(() => setSlide((s) => (s + 1) % banners.length), 6000);
+    return () => clearInterval(i);
+  }, []);
   const [depositAmount, setDepositAmount] = useState("");
   
   const [withdrawAmount, setWithdrawAmount] = useState("");
@@ -233,20 +245,22 @@ const UserDashboard = () => {
           <div>
             <div className="max-w-3xl mx-auto mb-8 space-y-6">
               <div className="relative rounded-2xl overflow-hidden aspect-[12/5]">
-                {[{ img: banner1, t: "Grow Your Wealth", s: "Earn daily returns on USDT plans" }, { img: banner2, t: "Trade P2P Instantly", s: "Buy & sell USDT with trusted merchants" }].map((b, i) => (
-                  <div key={i} className={`absolute inset-0 transition-opacity duration-700 ${slide === i ? "opacity-100" : "opacity-0"}`}>
-                    <img src={b.img} alt={b.t} width={1536} height={640} className="w-full h-full object-cover" />
+                {banners.map((b, i) => (
+                  <div key={b.t} aria-hidden={slide !== i} className={`absolute inset-0 transition-opacity duration-700 motion-reduce:transition-none ${slide === i ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+                    <img src={b.img} alt={b.t} loading={i === 0 ? "eager" : "lazy"} width={1536} height={640} className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
-                    <div className="absolute bottom-5 left-5">
-                      <h2 className="text-xl sm:text-3xl font-display font-bold text-foreground">{b.t}</h2>
-                      <p className="text-sm sm:text-base text-foreground/80">{b.s}</p>
+                    <div className="absolute bottom-3 left-3 right-3 sm:bottom-5 sm:left-5 sm:right-5">
+                      <h2 className="text-lg sm:text-3xl font-display font-bold text-foreground">{b.t}</h2>
+                      <p className="text-xs sm:text-base text-foreground/80">{b.s}</p>
                     </div>
                   </div>
                 ))}
               </div>
               <div className="flex justify-center gap-2 -mt-3">
-                {[0, 1].map((i) => (
-                  <button key={i} aria-label={`Slide ${i + 1}`} onClick={() => setSlide(i)} className={`h-2.5 rounded-full transition-all ${slide === i ? "w-8 bg-primary" : "w-2.5 bg-muted-foreground/50"}`} />
+                {banners.map((b, i) => (
+                  <Button key={b.t} variant="ghost" size="icon" aria-label={`Slide ${i + 1}`} aria-pressed={slide === i} onClick={() => setSlide(i)} className="h-7 w-8 hover:bg-gold/10">
+                    <span className={`h-2 rounded-full transition-all ${slide === i ? "w-6 bg-gold" : "w-2 bg-muted-foreground/50"}`} />
+                  </Button>
                 ))}
               </div>
               <div className="flex items-center gap-3 rounded-xl border border-border bg-secondary/50 px-4 py-3 overflow-hidden">

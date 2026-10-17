@@ -32,7 +32,8 @@ const Plans = () => {
     queryKey: ["profile", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("*").eq("user_id", user!.id).maybeSingle();
+      if (!user) return null;
+      const { data, error } = await supabase.from("profiles").select("*").eq("user_id", user.id).maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -55,35 +56,15 @@ const Plans = () => {
 
     setSubmitting(true);
     try {
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + selectedPlan.duration);
-      const dailyRate = (selectedPlan.dailyIncome / selectedPlan.invest) * 100;
-
-      // Deduct from wallet
-      const newBalance = walletBalance - selectedPlan.invest;
-      const { error: balError } = await supabase.from("profiles").update({ wallet_balance: newBalance }).eq("user_id", user.id);
-      if (balError) throw balError;
-
-      const { error } = await supabase.from("investments").insert({
-        user_id: user.id,
-        plan_name: selectedPlan.name,
-        amount: selectedPlan.invest,
-        daily_rate: dailyRate,
-        duration_days: selectedPlan.duration,
-        expires_at: expiresAt.toISOString(),
-      });
+      const { error } = await supabase.rpc("purchase_plan", { _plan_name: selectedPlan.name });
       if (error) throw error;
-
-      // Handle referral commissions server-side
-      await supabase.rpc("process_referral_commission", {
-        _investor_id: user.id,
-        _invest_amount: selectedPlan.invest,
-      });
 
       toast({ title: "Investment Created!", description: `$${selectedPlan.invest} USDT deducted. You're now earning $${selectedPlan.dailyIncome}/day.` });
       setSelectedPlan(null);
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       queryClient.invalidateQueries({ queryKey: ["investments"] });
+      queryClient.invalidateQueries({ queryKey: ["referral-qualifications"] });
+      queryClient.invalidateQueries({ queryKey: ["referral-rewards"] });
       navigate("/dashboard");
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
