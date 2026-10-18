@@ -8,6 +8,13 @@
       "when": 1792227401703,
       "tag": "0000_atomic_plan_purchases_and_repeatable_referral_rewards",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792311212963,
+      "tag": "0001_payment_proofs_and_action_notifications",
+      "breakpoints": true
     }
   ]
 }
