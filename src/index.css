@@ -113,7 +113,7 @@
 
 body.has-bottom-nav { padding-bottom: 5rem; }
 .premium-bottom-nav { background: var(--premium-menu-background); box-shadow: var(--premium-menu-shadow); border-top: 2px solid hsl(var(--premium-menu-border) / 0.7); }
-.premium-menu-link { color: hsl(var(--premium-menu-foreground) / 0.85); font-weight: 700; letter-spacing: 0.04em; }
+.premium-menu-link { color: hsl(var(--premium-menu-foreground) / 0.85); font-weight: 700; letter-spacing: 0.02em; min-width: 0; }
 .premium-menu-link:hover, .premium-menu-link[aria-current="page"] { color: hsl(var(--premium-menu-foreground)); }
 .premium-menu-link:focus-visible { outline: 2px solid hsl(var(--premium-menu-foreground)); outline-offset: -4px; border-radius: 8px; }
 .premium-menu-icon { transition: background-color 150ms ease, box-shadow 150ms ease; }

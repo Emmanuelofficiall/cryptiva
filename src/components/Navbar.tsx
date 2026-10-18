@@ -75,8 +75,8 @@ const Navbar = () => {
             {bottom.map((b) => {
               const active = isActive(b.to);
               return (
-                <Link key={b.label} to={b.to} aria-current={active ? "page" : undefined} className="premium-menu-link flex flex-col items-center justify-center gap-1 text-xs uppercase tracking-wide transition-colors">
-                  <span className="premium-menu-icon flex h-9 w-12 items-center justify-center rounded-lg"><b.icon className="w-6 h-6" strokeWidth={2.6} /></span>
+                <Link key={b.label} to={b.to} aria-current={active ? "page" : undefined} className="premium-menu-link flex min-w-0 flex-col items-center justify-center gap-1 text-[10px] uppercase tracking-normal transition-colors sm:text-[11px]">
+                  <span className="premium-menu-icon flex h-9 w-11 items-center justify-center rounded-lg"><b.icon className="w-6 h-6" strokeWidth={2.6} /></span>
                   {b.label}
                 </Link>
               );
