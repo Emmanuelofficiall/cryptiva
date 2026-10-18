@@ -35,12 +35,12 @@ const Navbar = () => {
   }, [user]);
 
   if (user) {
-    const bottom = [
+    const bottom: { to: string; label: string; short?: string; icon: typeof Home }[] = [
       { to: "/dashboard", label: "Home", icon: Home },
       { to: "/tasks", label: "Task", icon: CheckSquare },
       { to: "/plans", label: "Plans", icon: Layers },
       { to: "/p2p", label: "P2P", icon: ArrowLeftRight },
-      { to: "/referral", label: "Referral", icon: Users },
+      { to: "/referral", label: "Referral", short: "Invite", icon: Users },
       { to: "/dashboard?tab=profile", label: "Mine", icon: User },
     ];
     const isActive = (to: string) => {
@@ -77,7 +77,8 @@ const Navbar = () => {
               return (
                 <Link key={b.label} to={b.to} aria-current={active ? "page" : undefined} className="premium-menu-link flex min-w-0 flex-col items-center justify-center gap-1 text-[10px] uppercase tracking-normal transition-colors sm:text-[11px]">
                   <span className="premium-menu-icon flex h-9 w-11 items-center justify-center rounded-lg"><b.icon className="w-6 h-6" strokeWidth={2.6} /></span>
-                  {b.label}
+                  <span className="sm:hidden">{b.short ?? b.label}</span>
+                  <span className="hidden sm:inline">{b.label}</span>
                 </Link>
               );
             })}
