@@ -69,13 +69,13 @@ const Navbar = () => {
             </div>
           </div>
         </header>
-        <nav aria-label="Bottom menu" className="premium-bottom-nav fixed bottom-0 left-0 right-0 z-50 backdrop-blur-xl border-t border-gold/30">
+        <nav aria-label="Bottom menu" className="premium-bottom-nav fixed bottom-0 left-0 right-0 z-50">
           <div className="max-w-3xl mx-auto grid grid-cols-5 h-20">
             {bottom.map((b) => {
               const active = isActive(b.to);
               return (
-                <Link key={b.label} to={b.to} aria-current={active ? "page" : undefined} className={`flex flex-col items-center justify-center gap-1 text-xs font-medium transition-colors ${active ? "text-gold" : "text-foreground/70 hover:text-gold"}`}>
-                  <span className={`flex h-9 w-12 items-center justify-center rounded-lg ${active ? "bg-gold/15" : ""}`}><b.icon className="w-6 h-6" /></span>
+                <Link key={b.label} to={b.to} aria-current={active ? "page" : undefined} className="premium-menu-link flex flex-col items-center justify-center gap-1 text-xs font-medium transition-colors">
+                  <span className="premium-menu-icon flex h-9 w-12 items-center justify-center rounded-lg"><b.icon className="w-6 h-6" /></span>
                   {b.label}
                 </Link>
               );
