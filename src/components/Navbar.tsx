@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { DollarSign, BarChart3, Menu, X, LogOut, Bell, Home, CheckSquare, Layers, ArrowLeftRight, User, Shield } from "lucide-react";
+import { DollarSign, BarChart3, Menu, X, LogOut, Bell, Home, CheckSquare, Layers, ArrowLeftRight, User, Shield, Users } from "lucide-react";
 import { useEffect } from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,7 @@ const Navbar = () => {
       { to: "/tasks", label: "Task", icon: CheckSquare },
       { to: "/plans", label: "Plans", icon: Layers },
       { to: "/p2p", label: "P2P", icon: ArrowLeftRight },
+      { to: "/referral", label: "Referral", icon: Users },
       { to: "/dashboard?tab=profile", label: "Mine", icon: User },
     ];
     const isActive = (to: string) => {
@@ -70,7 +71,7 @@ const Navbar = () => {
           </div>
         </header>
         <nav aria-label="Bottom menu" className="premium-bottom-nav fixed bottom-0 left-0 right-0 z-50">
-          <div className="max-w-3xl mx-auto grid grid-cols-5 h-20">
+          <div className="max-w-3xl mx-auto grid grid-cols-6 h-20">
             {bottom.map((b) => {
               const active = isActive(b.to);
               return (
