@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { DollarSign, BarChart3, Menu, X, LogOut, Bell, Home, CheckSquare, Layers, ArrowLeftRight, User, Shield } from "lucide-react";
+import { DollarSign, BarChart3, Menu, X, LogOut, Bell, Home, CheckSquare, Layers, ArrowLeftRight, User, Shield, Users } from "lucide-react";
 import { useEffect } from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -35,11 +35,12 @@ const Navbar = () => {
   }, [user]);
 
   if (user) {
-    const bottom = [
+    const bottom: { to: string; label: string; short?: string; icon: typeof Home }[] = [
       { to: "/dashboard", label: "Home", icon: Home },
       { to: "/tasks", label: "Task", icon: CheckSquare },
       { to: "/plans", label: "Plans", icon: Layers },
       { to: "/p2p", label: "P2P", icon: ArrowLeftRight },
+      { to: "/referral", label: "Referral", short: "Invite", icon: Users },
       { to: "/dashboard?tab=profile", label: "Mine", icon: User },
     ];
     const isActive = (to: string) => {
@@ -70,13 +71,14 @@ const Navbar = () => {
           </div>
         </header>
         <nav aria-label="Bottom menu" className="premium-bottom-nav fixed bottom-0 left-0 right-0 z-50">
-          <div className="max-w-3xl mx-auto grid grid-cols-5 h-20">
+          <div className="max-w-3xl mx-auto grid grid-cols-6 h-20">
             {bottom.map((b) => {
               const active = isActive(b.to);
               return (
-                <Link key={b.label} to={b.to} aria-current={active ? "page" : undefined} className="premium-menu-link flex flex-col items-center justify-center gap-1 text-xs uppercase tracking-wide transition-colors">
-                  <span className="premium-menu-icon flex h-9 w-12 items-center justify-center rounded-lg"><b.icon className="w-6 h-6" strokeWidth={2.6} /></span>
-                  {b.label}
+                <Link key={b.label} to={b.to} aria-current={active ? "page" : undefined} className="premium-menu-link flex min-w-0 flex-col items-center justify-center gap-1 text-[10px] uppercase tracking-normal transition-colors sm:text-[11px]">
+                  <span className="premium-menu-icon flex h-9 w-11 items-center justify-center rounded-lg"><b.icon className="w-6 h-6" strokeWidth={2.6} /></span>
+                  <span className="sm:hidden">{b.short ?? b.label}</span>
+                  <span className="hidden sm:inline">{b.label}</span>
                 </Link>
               );
             })}
