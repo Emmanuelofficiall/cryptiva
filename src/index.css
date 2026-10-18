@@ -49,12 +49,12 @@
     --chart-down: 0 72% 51%;
 
     --gold: 38 92% 50%;
-    --premium-surface: 218 85% 36%;
-    --premium-highlight: 212 90% 53%;
+    --premium-surface: 268 62% 26%;
+    --premium-highlight: 282 78% 52%;
     --premium-menu-foreground: 0 0% 100%;
-    --premium-menu-border: 211 95% 70%;
-    --premium-menu-background: linear-gradient(105deg, hsl(var(--premium-surface)), hsl(var(--premium-highlight)));
-    --premium-menu-shadow: 0 -4px 24px hsl(var(--premium-surface) / 0.3);
+    --premium-menu-border: 288 90% 74%;
+    --premium-menu-background: linear-gradient(105deg, hsl(var(--premium-surface)), hsl(var(--premium-highlight)) 78%, hsl(300 85% 62%));
+    --premium-menu-shadow: 0 -6px 28px hsl(282 78% 40% / 0.45), inset 0 1px 0 hsl(var(--premium-menu-border) / 0.45);
     --gold-foreground: 0 0% 2%;
     --cyan: 185 80% 50%;
     --purple: 270 70% 60%;
