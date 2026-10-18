@@ -85,7 +85,9 @@ export type Database = {
           created_at: string | null
           currency: string | null
           id: string
+          invoice_number: string | null
           method: string
+          proof_path: string | null
           reviewed_at: string | null
           status: string | null
           transaction_ref: string | null
@@ -96,7 +98,9 @@ export type Database = {
           created_at?: string | null
           currency?: string | null
           id?: string
+          invoice_number?: string | null
           method: string
+          proof_path?: string | null
           reviewed_at?: string | null
           status?: string | null
           transaction_ref?: string | null
@@ -107,7 +111,9 @@ export type Database = {
           created_at?: string | null
           currency?: string | null
           id?: string
+          invoice_number?: string | null
           method?: string
+          proof_path?: string | null
           reviewed_at?: string | null
           status?: string | null
           transaction_ref?: string | null
@@ -207,6 +213,42 @@ export type Database = {
           id?: string
           is_active?: boolean
           photo_url?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          email_status: string
+          event_key: string
+          id: string
+          link: string
+          message: string
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_status?: string
+          event_key: string
+          id?: string
+          link?: string
+          message: string
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email_status?: string
+          event_key?: string
+          id?: string
+          link?: string
+          message?: string
+          read_at?: string | null
+          title?: string
           user_id?: string
         }
         Relationships: []
@@ -599,11 +641,25 @@ export type Database = {
         Args: { new_user_id: string; referrer_code: string }
         Returns: undefined
       }
+      notify_own_account_action: {
+        Args: { action: string }
+        Returns: undefined
+      }
       process_referral_commission: {
         Args: { _invest_amount: number; _investor_id: string }
         Returns: undefined
       }
       purchase_plan: { Args: { _plan_name: string }; Returns: string }
+      record_action_notification: {
+        Args: {
+          body: string
+          destination?: string
+          event_id: string
+          heading: string
+          recipient: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
