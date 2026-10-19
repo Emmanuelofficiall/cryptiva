@@ -9,6 +9,7 @@ import {
   MessageCircle, Send, Shield, Settings, Plus, Trash2, ArrowLeftRight
 } from "lucide-react";
 import AdminP2PPanel from "@/components/AdminP2PPanel";
+import PaymentProofButton from "@/components/PaymentProofButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,14 +58,8 @@ const AdminDashboard = () => {
     const { error } = await supabase.from("deposits").update({ status: action, reviewed_at: new Date().toISOString() }).eq("id", id);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     
-    // Credit wallet balance when approved
-    if (action === "approved" && deposit) {
-      const { data: profile } = await supabase.from("profiles").select("wallet_balance").eq("user_id", deposit.user_id).maybeSingle();
-      if (profile) {
-        const newBalance = Number(profile.wallet_balance || 0) + Number(deposit.amount);
-        await supabase.from("profiles").update({ wallet_balance: newBalance }).eq("user_id", deposit.user_id);
-      }
-    }
+    queryClient.invalidateQueries({ queryKey: ["admin-profiles"] });
+    queryClient.invalidateQueries({ queryKey: ["notifications"] });
     
     toast({ title: action === "approved" ? "Deposit Approved ✅" : "Deposit Rejected", description: action === "approved" ? `$${deposit?.amount} credited to user's wallet.` : undefined });
     refetchDeposits();
@@ -200,14 +195,14 @@ const AdminDashboard = () => {
         {activeTab === "deposits" && (
           <div className="glass-card overflow-hidden"><div className="overflow-x-auto">
             <table className="w-full">
-              <thead><tr className="border-b border-border">{["User", "Amount", "Method", "Ref", "Date", "Status", "Actions"].map((h) => <th key={h} className="text-left text-xs text-muted-foreground font-medium p-4">{h}</th>)}</tr></thead>
+              <thead><tr className="border-b border-border">{["User", "Amount", "Method", "Invoice / Proof", "Date", "Status", "Actions"].map((h) => <th key={h} className="text-left text-xs text-muted-foreground font-medium p-4">{h}</th>)}</tr></thead>
               <tbody>
                 {(allDeposits || []).map((d) => (
                   <tr key={d.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
                     <td className="p-4 text-sm font-medium text-foreground">{getProfileName(d.user_id)}</td>
                     <td className="p-4 text-sm text-foreground font-semibold">${Number(d.amount).toLocaleString()}</td>
                     <td className="p-4 text-sm text-muted-foreground">{d.method}</td>
-                    <td className="p-4 text-sm text-muted-foreground font-mono">{d.transaction_ref || "—"}</td>
+                    <td className="p-4 text-sm text-muted-foreground"><p className="mb-2 max-w-48 break-all font-mono text-xs">{d.invoice_number || d.transaction_ref || "—"}</p><PaymentProofButton path={d.proof_path} /></td>
                     <td className="p-4 text-sm text-muted-foreground">{new Date(d.created_at!).toLocaleDateString()}</td>
                     <td className="p-4"><span className={`text-xs font-semibold px-2 py-1 rounded-full ${d.status === "approved" ? "bg-primary/10 text-primary" : d.status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-accent/10 text-accent"}`}>{d.status}</span></td>
                     <td className="p-4">{d.status === "pending" ? (

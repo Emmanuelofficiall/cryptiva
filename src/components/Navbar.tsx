@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminRole } from "@/hooks/useAdminRole";
+import NotificationBell from "@/components/NotificationBell";
 
 const Navbar = () => {
   const location = useLocation();
@@ -62,10 +63,7 @@ const Navbar = () => {
               {isAdmin && (
                 <Link to="/admin" aria-label="Admin" className="p-2 text-muted-foreground hover:text-foreground"><Shield className="w-5 h-5" /></Link>
               )}
-              <Link to="/referral" aria-label="Notifications" className="relative p-2 text-muted-foreground hover:text-foreground">
-                <Bell className="w-6 h-6" />
-                <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-destructive" />
-              </Link>
+              <NotificationBell />
               <button onClick={handleSignOut} aria-label="Logout" className="p-2 text-muted-foreground hover:text-foreground"><LogOut className="w-5 h-5" /></button>
             </div>
           </div>

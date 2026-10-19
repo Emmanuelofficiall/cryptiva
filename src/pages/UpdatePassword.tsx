@@ -29,6 +29,7 @@ const UpdatePassword = () => {
     try {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
+      await supabase.rpc("notify_own_account_action", { action: "password_updated" });
       toast({ title: "Password updated!", description: "You can now sign in with your new password." });
       navigate("/dashboard");
     } catch (err: any) {
