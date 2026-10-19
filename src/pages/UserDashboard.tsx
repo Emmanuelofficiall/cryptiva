@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import PaymentProofButton from "@/components/PaymentProofButton";
+import { validatePaymentProof } from "@/lib/payment-proof";
 import { Navigate, Link, useSearchParams } from "react-router-dom";
 import { useEffect } from "react";
 import banner1 from "@/assets/banner-1.jpg";
@@ -46,6 +48,8 @@ const UserDashboard = () => {
     return () => clearInterval(i);
   }, []);
   const [depositAmount, setDepositAmount] = useState("");
+  const [depositProof, setDepositProof] = useState<File | null>(null);
+  const [proofInputKey, setProofInputKey] = useState(0);
   
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [withdrawDest, setWithdrawDest] = useState("");
@@ -130,30 +134,39 @@ const UserDashboard = () => {
     toast({ title: "Copied!", description: "Copied to clipboard." });
   };
 
-  const generateInvoiceNumber = () => {
-    const prefix = "INV";
-    const timestamp = Date.now().toString(36).toUpperCase();
-    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `${prefix}-${timestamp}-${random}`;
-  };
-
   const handleDeposit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!depositAmount || Number(depositAmount) <= 0) return;
+    const proofError = validatePaymentProof(depositProof);
+    if (proofError || !depositProof) {
+      toast({ title: "Payment proof required", description: proofError || undefined, variant: "destructive" });
+      return;
+    }
+    if (!Number.isFinite(Number(depositAmount)) || Number(depositAmount) <= 0) return;
     setSubmitting(true);
+    let uploadedPath: string | null = null;
     try {
-      const invoiceNumber = generateInvoiceNumber();
-      const { error } = await supabase.from("deposits").insert({
+      const extension = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "application/pdf": "pdf" }[depositProof.type];
+      const path = `${user.id}/${crypto.randomUUID()}.${extension}`;
+      const { error: uploadError } = await supabase.storage.from("payment-proofs").upload(path, depositProof, { contentType: depositProof.type });
+      if (uploadError) throw uploadError;
+      uploadedPath = path;
+      const { data, error } = await supabase.from("deposits").insert({
         user_id: user.id,
         amount: Number(depositAmount),
         method: "TRC20 USDT",
-        transaction_ref: invoiceNumber,
+        proof_path: path,
         currency: "USDT",
-      });
+      }).select("invoice_number").single();
       if (error) throw error;
-      toast({ title: "Deposit submitted!", description: `Invoice: ${invoiceNumber}. Pending admin approval.` });
+      uploadedPath = null;
+      toast({ title: "Deposit submitted!", description: `Invoice: ${data.invoice_number}. Pending admin approval.` });
       setDepositAmount("");
+      setDepositProof(null);
+      setProofInputKey(k => k + 1);
+      queryClient.invalidateQueries({ queryKey: ["deposits"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
     } catch (err: any) {
+      if (uploadedPath) await supabase.storage.from("payment-proofs").remove([uploadedPath]);
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
       setSubmitting(false);
@@ -482,7 +495,17 @@ const UserDashboard = () => {
               <form onSubmit={handleDeposit} className="space-y-4">
                 <div>
                   <Label className="text-foreground text-sm">Amount (USDT)</Label>
-                  <Input type="number" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} placeholder="Enter amount in USDT" className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground" required />
+                  <Input type="number" min="0.01" step="0.01" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} placeholder="Enter amount in USDT" className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground" required />
+                </div>
+                <div>
+                  <Label htmlFor="deposit-proof">Payment proof</Label>
+                  <Input key={proofInputKey} id="deposit-proof" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" disabled={submitting} required className="mt-2 h-auto bg-secondary" onChange={e => {
+                    const file = e.target.files?.[0] || null;
+                    const error = validatePaymentProof(file);
+                    if (error) { setDepositProof(null); e.target.value = ""; toast({ title: "Invalid proof", description: error, variant: "destructive" }); }
+                    else setDepositProof(file);
+                  }} />
+                  <p className="mt-2 text-xs text-muted-foreground">JPG, PNG, WebP or PDF · Maximum 5 MB</p>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">An invoice number will be auto-generated for your deposit.</p>
                 <Button type="submit" disabled={submitting} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 glow-green">
@@ -490,6 +513,14 @@ const UserDashboard = () => {
                   Submit Deposit
                 </Button>
               </form>
+            </div>
+            <h3 className="mb-3 font-semibold">Deposit history</h3>
+            <div className="divide-y divide-border">
+              {(deposits || []).map(d => <div key={d.id} className="space-y-2 py-4">
+                <div className="flex justify-between gap-3 text-sm"><strong>{Number(d.amount).toFixed(2)} USDT</strong><span className="capitalize text-muted-foreground">{d.status}</span></div>
+                <p className="break-all font-mono text-xs text-muted-foreground">{d.invoice_number || d.transaction_ref}</p>
+                <PaymentProofButton path={d.proof_path} />
+              </div>)}
             </div>
           </div>
         )}
