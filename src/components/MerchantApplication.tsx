@@ -35,7 +35,7 @@ export default function MerchantApplication() {
     if (!parsed.success) { toast({ title: "Check your application", description: parsed.error.issues[0]?.message, variant: "destructive" }); return; }
     setBusy(true);
     try {
-      const { error } = await supabase.from("merchant_applications").insert({ user_id: user.id, ...parsed.data });
+      const { error } = await supabase.from("merchant_applications").insert({ user_id: user.id, display_name: parsed.data.display_name || "", contact_phone: parsed.data.contact_phone || "", country: parsed.data.country || "", experience: parsed.data.experience || "" });
       if (error) throw error;
       await client.invalidateQueries({ queryKey: ["merchant-applications"] });
       client.invalidateQueries({ queryKey: ["notifications"] });
