@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import MerchantApplication from "@/components/MerchantApplication";
 import { Navigate } from "react-router-dom";
 import {
   Loader2, ShoppingCart, Tag, Plus, X, CheckCircle, CreditCard,
@@ -473,8 +474,8 @@ const P2P = () => {
     { key: "orders", label: "Orders", icon: Wallet },
     { key: "trades", label: "Trades", icon: BarChart3 },
     { key: "earnings", label: "Earnings", icon: TrendingUp },
+    { key: "merchant", label: isMerchant ? "Merchant" : "Become a Merchant", icon: Store },
     ...(isMerchant ? [
-      { key: "merchant" as Tab, label: "Merchant", icon: Store },
       { key: "transfer" as Tab, label: "Transfer", icon: Send },
     ] : []),
   ];
@@ -1223,6 +1224,7 @@ const P2P = () => {
         )}
 
         {/* MERCHANT TAB */}
+        {tab === "merchant" && !isMerchant && <MerchantApplication />}
         {tab === "merchant" && isMerchant && (
           <div className="max-w-lg mx-auto">
             <div className="glass-card p-6 glow-green">

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import AdminP2PPanel from "@/components/AdminP2PPanel";
 import PaymentProofButton from "@/components/PaymentProofButton";
+import AdminMerchantApplications from "@/components/AdminMerchantApplications";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -275,7 +276,7 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {activeTab === "merchants" && <MerchantsPanel profiles={allProfiles || []} merchants={merchants || []} refetch={refetchMerchants} />}
+        {activeTab === "merchants" && <><AdminMerchantApplications onReviewed={refetchMerchants} /><MerchantsPanel profiles={allProfiles || []} merchants={merchants || []} refetch={refetchMerchants} /></>}
         {activeTab === "p2p-settings" && <P2PSettingsPanel settings={p2pSettings || []} refetch={refetchP2P} />}
         {activeTab === "p2p-orders" && <AdminP2PPanel profiles={allProfiles || []} />}
         {activeTab === "chat" && <AdminChatPanel />}
