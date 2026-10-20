@@ -8,3 +8,4 @@
 - [ ] Financial and account notification bell
 - [ ] Email notifications — blocked pending sender domain setup
 - [ ] Verify deposit and notification flow
+- [ ] Merchant application form and admin review
