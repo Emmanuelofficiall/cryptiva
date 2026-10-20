@@ -190,6 +190,48 @@ export type Database = {
         }
         Relationships: []
       }
+      merchant_applications: {
+        Row: {
+          contact_phone: string
+          country: string
+          created_at: string
+          display_name: string
+          experience: string
+          id: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          contact_phone: string
+          country: string
+          created_at?: string
+          display_name: string
+          experience: string
+          id?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          contact_phone?: string
+          country?: string
+          created_at?: string
+          display_name?: string
+          experience?: string
+          id?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       merchants: {
         Row: {
           created_at: string | null
@@ -658,6 +700,10 @@ export type Database = {
           heading: string
           recipient: string
         }
+        Returns: undefined
+      }
+      review_merchant_application: {
+        Args: { application_id: string; decision: string; note?: string }
         Returns: undefined
       }
     }

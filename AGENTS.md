@@ -6,3 +6,4 @@
 - Deposit proof files stay in private storage with owner/admin access; server validation generates invoices and credits each approved deposit atomically once.
 - Financial notifications are recorded by database event triggers with unique event keys; clients may only read their own alerts and mark them read.
 - Notification email delivery remains awaiting domain setup until the managed email infrastructure is configured; never claim queued alerts have been emailed.
+- Merchant applications are owner-submitted records; only the admin-validated review RPC activates merchants atomically, preventing self-approval and duplicate pending applications.
