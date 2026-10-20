@@ -1,17 +1,7 @@
 import { useEffect, useState } from "react";
 import { TrendingUp, TrendingDown, RefreshCw } from "lucide-react";
 import { motion } from "framer-motion";
-
-interface CoinData {
-  id: string;
-  symbol: string;
-  name: string;
-  current_price: number;
-  price_change_percentage_24h: number;
-  image: string;
-  market_cap: number;
-  total_volume: number;
-}
+import { type CoinData, parseMarketData, formatPrice, formatMarketCap, formatChange } from "@/lib/market-data";
 
 const LiveCryptoMarket = () => {
   const [coins, setCoins] = useState<CoinData[]>([]);
@@ -24,7 +14,7 @@ const LiveCryptoMarket = () => {
       );
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
-      setCoins(data);
+      setCoins(parseMarketData(data));
     } catch {
       // Fallback static data
       setCoins([
@@ -47,15 +37,6 @@ const LiveCryptoMarket = () => {
     const interval = setInterval(fetchPrices, 60000);
     return () => clearInterval(interval);
   }, []);
-
-  const formatPrice = (price: number) =>
-    price >= 1 ? `$${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `$${price.toFixed(4)}`;
-
-  const formatMarketCap = (cap: number) => {
-    if (cap >= 1e12) return `$${(cap / 1e12).toFixed(2)}T`;
-    if (cap >= 1e9) return `$${(cap / 1e9).toFixed(2)}B`;
-    return `$${(cap / 1e6).toFixed(2)}M`;
-  };
 
   return (
     <section className="py-20 bg-card/30">
@@ -86,7 +67,8 @@ const LiveCryptoMarket = () => {
 
             <div className="divide-y divide-border/50">
               {coins.map((coin, i) => {
-                const isUp = coin.price_change_percentage_24h >= 0;
+                const hasChange = typeof coin.price_change_percentage_24h === "number";
+                const isUp = hasChange && coin.price_change_percentage_24h >= 0;
                 return (
                   <motion.div
                     key={coin.id}
@@ -112,9 +94,9 @@ const LiveCryptoMarket = () => {
                     </div>
                     <p className="text-sm font-semibold text-foreground text-right">{formatPrice(coin.current_price)}</p>
                     <div className="hidden sm:flex items-center justify-end gap-1">
-                      {isUp ? <TrendingUp className="w-3 h-3 text-primary" /> : <TrendingDown className="w-3 h-3 text-destructive" />}
-                      <span className={`text-sm font-semibold ${isUp ? "text-primary" : "text-destructive"}`}>
-                        {isUp ? "+" : ""}{coin.price_change_percentage_24h.toFixed(2)}%
+                      {hasChange && (isUp ? <TrendingUp className="w-3 h-3 text-primary" /> : <TrendingDown className="w-3 h-3 text-destructive" />)}
+                      <span className={`text-sm font-semibold ${!hasChange ? "text-muted-foreground" : isUp ? "text-primary" : "text-destructive"}`}>
+                        {formatChange(coin.price_change_percentage_24h)}
                       </span>
                     </div>
                     <p className="hidden sm:block text-sm text-muted-foreground text-right">{formatMarketCap(coin.market_cap)}</p>
