@@ -7,3 +7,4 @@
 - Financial notifications are recorded by database event triggers with unique event keys; clients may only read their own alerts and mark them read.
 - Notification email delivery remains awaiting domain setup until the managed email infrastructure is configured; never claim queued alerts have been emailed.
 - Merchant applications are owner-submitted records; only the admin-validated review RPC activates merchants atomically, preventing self-approval and duplicate pending applications.
+- Market API responses are validated before rendering; unavailable financial values remain null and display a neutral placeholder rather than fabricated zeros.
