@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import MerchantApplication from "@/components/MerchantApplication";
+import { getP2PRate } from "@/lib/p2p-prices";
 import { Navigate } from "react-router-dom";
 import {
   Loader2, ShoppingCart, Tag, Plus, X, CheckCircle, CreditCard,
@@ -53,8 +54,11 @@ const P2P = () => {
 
   const { data: currencies } = useQuery({
     queryKey: ["p2p-currencies"],
+    staleTime: 0,
+    refetchInterval: 10000,
     queryFn: async () => {
-      const { data } = await supabase.from("p2p_settings").select("*").eq("is_active", true).order("currency");
+      const { data, error } = await supabase.from("p2p_settings").select("*").eq("is_active", true).order("currency");
+      if (error) throw error;
       return data || [];
     },
   });
@@ -152,19 +156,14 @@ const P2P = () => {
   };
 
   const getBuyPrice = (currency?: string) => {
-    const c = currencies?.find((c) => c.currency === (currency || selectedCurrency));
-    return c ? Number(c.buy_price || c.usdt_price) : 0;
+    return getP2PRate(currencies, currency || selectedCurrency, "buy");
   };
 
   const getSellPrice = (currency?: string) => {
-    const c = currencies?.find((c) => c.currency === (currency || selectedCurrency));
-    return c ? Number(c.sell_price || c.usdt_price) : 0;
+    return getP2PRate(currencies, currency || selectedCurrency, "sell");
   };
 
-  const getPrice = (currency?: string) => {
-    const c = currencies?.find((c) => c.currency === (currency || selectedCurrency));
-    return c ? Number(c.usdt_price) : 0;
-  };
+  const merchantRate = getP2PRate(currencies, selectedCurrency, merchantOrderType, "merchant");
 
   const isMerchant = merchants?.some((m) => m.user_id === user.id);
 
@@ -193,6 +192,10 @@ const P2P = () => {
   const handleBuy = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedMerchant || !buyAmount) return;
+    if (!getBuyPrice()) {
+      toast({ title: "Price unavailable", description: "The admin must set a valid selling price for this currency.", variant: "destructive" });
+      return;
+    }
     if (!myPaymentMethods || myPaymentMethods.length === 0) {
       toast({ title: "Add payment method first", description: "Go to the Payment tab to add your payment method before trading.", variant: "destructive" });
       return;
@@ -225,6 +228,10 @@ const P2P = () => {
   const handleSell = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedMerchant || !sellAmount) return;
+    if (!getSellPrice()) {
+      toast({ title: "Price unavailable", description: "The admin must set a valid buying price for this currency.", variant: "destructive" });
+      return;
+    }
     if (!myPaymentMethods || myPaymentMethods.length === 0) {
       toast({ title: "Add payment method first", description: "Go to the Payment tab to add your payment method before trading.", variant: "destructive" });
       return;
@@ -358,6 +365,10 @@ const P2P = () => {
   const handleMerchantOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!merchantOrderAmount) return;
+    if (!merchantRate) {
+      toast({ title: "Price unavailable", description: "The admin must set a valid price for this currency.", variant: "destructive" });
+      return;
+    }
     const amount = Number(merchantOrderAmount);
 
     // Merchants must have enough USDT to create a sell order
@@ -381,7 +392,7 @@ const P2P = () => {
         user_id: user.id,
         order_type: merchantOrderType,
         amount,
-        price_per_unit: merchantOrderType === "buy" ? getBuyPrice() : getSellPrice(),
+        price_per_unit: merchantRate,
         payment_method: selectedCurrency,
         local_currency: selectedCurrency,
         status: "open",
@@ -665,7 +676,7 @@ const P2P = () => {
                       </div>
                     )}
                   </div>
-                  <Button onClick={() => { if (buyAmount) setShowConfirm({ type: "buy", amount: buyAmount }); }} disabled={!buyAmount} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 glow-green">
+                  <Button onClick={() => { if (buyAmount) setShowConfirm({ type: "buy", amount: buyAmount }); }} disabled={!buyAmount || !getBuyPrice()} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 glow-green">
                     <ShoppingCart className="w-4 h-4 mr-2" />Buy USDT
                   </Button>
                 </div>
@@ -684,7 +695,7 @@ const P2P = () => {
                       </div>
                     )}
                   </div>
-                  <Button onClick={() => { if (sellAmount) setShowConfirm({ type: "sell", amount: sellAmount }); }} disabled={!sellAmount} className="w-full bg-accent text-accent-foreground hover:bg-accent/90 glow-gold">
+                  <Button onClick={() => { if (sellAmount) setShowConfirm({ type: "sell", amount: sellAmount }); }} disabled={!sellAmount || !getSellPrice()} className="w-full bg-accent text-accent-foreground hover:bg-accent/90 glow-gold">
                     <Tag className="w-4 h-4 mr-2" />Sell USDT
                   </Button>
                 </div>
@@ -1253,7 +1264,7 @@ const P2P = () => {
                 <select value={selectedCurrency} onChange={(e) => setSelectedCurrency(e.target.value)}
                   className="mt-1.5 w-full rounded-lg bg-secondary border border-border text-foreground p-2.5 text-sm">
                   {(currencies || []).map((c) => (
-                    <option key={c.currency} value={c.currency}>{c.currency} — {Number(c.usdt_price).toLocaleString()} per USDT</option>
+                    <option key={c.currency} value={c.currency}>{c.currency} — {getP2PRate(currencies, c.currency, merchantOrderType, "merchant").toLocaleString()} per USDT</option>
                   ))}
                 </select>
               </div>
@@ -1262,10 +1273,10 @@ const P2P = () => {
                   <Label className="text-foreground text-sm">Amount (USDT)</Label>
                   <Input type="number" value={merchantOrderAmount} onChange={(e) => setMerchantOrderAmount(e.target.value)} placeholder="e.g. 100" className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground" required min="1" />
                   {merchantOrderAmount && (
-                    <p className="text-xs text-primary mt-1">{selectedCurrency} value: {(Number(merchantOrderAmount) * getPrice()).toLocaleString()}</p>
+                    <p className="text-xs text-primary mt-1">{selectedCurrency} value: {(Number(merchantOrderAmount) * merchantRate).toLocaleString()}</p>
                   )}
                 </div>
-                <Button type="submit" disabled={submitting} className={`w-full ${merchantOrderType === "buy" ? "bg-primary text-primary-foreground hover:bg-primary/90 glow-green" : "bg-accent text-accent-foreground hover:bg-accent/90 glow-gold"}`}>
+                <Button type="submit" disabled={submitting || !merchantRate} className={`w-full ${merchantOrderType === "buy" ? "bg-primary text-primary-foreground hover:bg-primary/90 glow-green" : "bg-accent text-accent-foreground hover:bg-accent/90 glow-gold"}`}>
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                   Create {merchantOrderType === "buy" ? "Buy" : "Sell"} Order
                 </Button>
@@ -1465,10 +1476,10 @@ const P2P = () => {
             <div className="flex-1 w-full">
               <Label className="text-foreground text-sm">Result</Label>
               <div className="mt-1.5 rounded-lg bg-secondary border border-border text-foreground p-2.5 text-sm font-semibold">
-                {convertAmount
+                {convertAmount && (convertDirection === "to-local" ? getSellPrice() : getBuyPrice())
                   ? convertDirection === "to-local"
-                    ? `${selectedCurrency} ${(Number(convertAmount) * getPrice()).toLocaleString()}`
-                    : `${(Number(convertAmount) / (getPrice() || 1)).toLocaleString(undefined, { maximumFractionDigits: 4 })} USDT`
+                    ? `${selectedCurrency} ${(Number(convertAmount) * getSellPrice()).toLocaleString()}`
+                    : `${(Number(convertAmount) / getBuyPrice()).toLocaleString(undefined, { maximumFractionDigits: 4 })} USDT`
                   : "—"}
               </div>
             </div>
