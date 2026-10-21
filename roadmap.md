@@ -9,3 +9,4 @@
 - [ ] Email notifications — blocked pending sender domain setup
 - [x] Verify deposit and notification flow
 - [x] Merchant application form and admin review
+- [ ] Apply admin buy/sell prices consistently throughout P2P and verify
