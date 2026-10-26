@@ -177,16 +177,16 @@ const UserDashboard = () => {
     e.preventDefault();
     const amt = Number(withdrawAmount);
     if (!withdrawAmount || amt <= 0) return;
-    const WITHDRAWAL_FEE = Number((amt * 0.1).toFixed(2)); // 10% fee
-    if (amt + WITHDRAWAL_FEE > walletBalance) {
-      toast({ title: "Insufficient balance", description: `You need at least $${(amt + WITHDRAWAL_FEE).toFixed(2)} USDT (including 10% fee of $${WITHDRAWAL_FEE.toFixed(2)}).`, variant: "destructive" });
+    const fee = Number((amt * 0.1).toFixed(2)); // 10% fee taken from the requested amount
+    const netAmount = Number((amt - fee).toFixed(2)); // what actually arrives at the address
+    if (amt > walletBalance) {
+      toast({ title: "Insufficient balance", description: `You need at least $${amt.toFixed(2)} USDT in your wallet.`, variant: "destructive" });
       return;
     }
     setSubmitting(true);
     try {
-      // Deduct wallet balance immediately (amount + fee)
-      const totalDeduction = amt + WITHDRAWAL_FEE;
-      const { error: balError } = await supabase.from("profiles").update({ wallet_balance: walletBalance - totalDeduction }).eq("user_id", user.id);
+      // Deduct only the requested amount; the fee comes out of it (user receives net)
+      const { error: balError } = await supabase.from("profiles").update({ wallet_balance: walletBalance - amt }).eq("user_id", user.id);
       if (balError) throw balError;
 
       const { error } = await supabase.from("withdrawals").insert({
@@ -201,7 +201,7 @@ const UserDashboard = () => {
         throw error;
       }
       queryClient.invalidateQueries({ queryKey: ["profile"] });
-      toast({ title: "Withdrawal requested!", description: `$${amt} USDT (+ $${WITHDRAWAL_FEE} fee) deducted. Pending admin approval.` });
+      toast({ title: "Withdrawal requested!", description: `$${amt.toFixed(2)} USDT deducted — $${fee.toFixed(2)} fee, $${netAmount.toFixed(2)} will arrive at your address. Pending admin approval.` });
       setWithdrawAmount("");
       setWithdrawDest("");
     } catch (err: any) {
@@ -539,6 +539,13 @@ const UserDashboard = () => {
                 <div>
                   <Label className="text-foreground text-sm">Amount (USDT)</Label>
                   <Input type="number" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} placeholder="Enter amount" className="mt-1.5 bg-secondary border-border text-foreground placeholder:text-muted-foreground" required />
+                  {withdrawAmount && Number(withdrawAmount) > 0 && (
+                    <div className="mt-2 rounded-lg bg-primary/10 border border-primary/30 p-3 flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">You will receive</span>
+                      <span className="text-sm font-bold text-primary">${(Number(withdrawAmount) - Number((Number(withdrawAmount) * 0.1).toFixed(2))).toFixed(2)} USDT</span>
+                      <span className="text-xs text-muted-foreground">10% fee: ${Number((Number(withdrawAmount) * 0.1).toFixed(2)).toFixed(2)}</span>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <Label className="text-foreground text-sm">Withdrawal Method</Label>
