@@ -6,7 +6,7 @@ import Navbar from "@/components/Navbar";
 import {
   Users, DollarSign, TrendingUp, Activity,
   CheckCircle, XCircle, BarChart3, GitBranch, Loader2, ShieldAlert,
-  MessageCircle, Send, Shield, Settings, Plus, Trash2, ArrowLeftRight
+  MessageCircle, Send, Shield, Settings, Plus, Trash2, ArrowLeftRight, Copy
 } from "lucide-react";
 import AdminP2PPanel from "@/components/AdminP2PPanel";
 import PaymentProofButton from "@/components/PaymentProofButton";
@@ -75,7 +75,7 @@ const AdminDashboard = () => {
     if (action === "rejected" && withdrawal) {
       const { data: profile } = await supabase.from("profiles").select("wallet_balance").eq("user_id", withdrawal.user_id).maybeSingle();
       if (profile) {
-        const refundAmount = Number(withdrawal.amount) + Number((Number(withdrawal.amount) * 0.1).toFixed(2)); // amount + 10% fee
+        const refundAmount = Number(withdrawal.amount); // fee is taken from the amount, so refund the full requested amount
         await supabase.from("profiles").update({ wallet_balance: Number(profile.wallet_balance || 0) + refundAmount }).eq("user_id", withdrawal.user_id);
       }
     }
@@ -223,14 +223,22 @@ const AdminDashboard = () => {
         {activeTab === "withdrawals" && (
           <div className="glass-card overflow-hidden"><div className="overflow-x-auto">
             <table className="w-full">
-              <thead><tr className="border-b border-border">{["User", "Amount", "Method", "Destination", "Date", "Status", "Actions"].map((h) => <th key={h} className="text-left text-xs text-muted-foreground font-medium p-4">{h}</th>)}</tr></thead>
+              <thead><tr className="border-b border-border">{["User", "Amount", "To Send (net)", "Method", "Destination", "Date", "Status", "Actions"].map((h) => <th key={h} className="text-left text-xs text-muted-foreground font-medium p-4">{h}</th>)}</tr></thead>
               <tbody>
                 {(allWithdrawals || []).map((w) => (
                   <tr key={w.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
                     <td className="p-4 text-sm font-medium text-foreground">{getProfileName(w.user_id)}</td>
                     <td className="p-4 text-sm text-foreground font-semibold">${Number(w.amount).toLocaleString()}</td>
+                    <td className="p-4 text-sm text-primary font-semibold">${(Number(w.amount) * 0.9).toFixed(2)}</td>
                     <td className="p-4 text-sm text-muted-foreground">{w.method}</td>
-                    <td className="p-4 text-sm text-muted-foreground font-mono">{w.destination}</td>
+                    <td className="p-4 text-sm text-muted-foreground font-mono max-w-[220px]">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate">{w.destination}</span>
+                        <button onClick={() => copyAddress(w.destination)} title="Copy address" className="text-primary hover:text-primary/80 shrink-0">
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
                     <td className="p-4 text-sm text-muted-foreground">{new Date(w.created_at!).toLocaleDateString()}</td>
                     <td className="p-4"><span className={`text-xs font-semibold px-2 py-1 rounded-full ${w.status === "approved" ? "bg-primary/10 text-primary" : w.status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-accent/10 text-accent"}`}>{w.status}</span></td>
                     <td className="p-4">{w.status === "pending" ? (
