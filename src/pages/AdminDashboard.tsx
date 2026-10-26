@@ -66,6 +66,15 @@ const AdminDashboard = () => {
     refetchDeposits();
   };
 
+  const copyAddress = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ title: "Address copied", description: text.length > 24 ? `${text.slice(0, 24)}…` : text });
+    } catch {
+      toast({ title: "Copy failed", description: "Please copy the address manually.", variant: "destructive" });
+    }
+  };
+
   const handleWithdrawal = async (id: string, action: "approved" | "rejected") => {
     const withdrawal = allWithdrawals?.find(w => w.id === id);
     const { error } = await supabase.from("withdrawals").update({ status: action, reviewed_at: new Date().toISOString() }).eq("id", id);
@@ -249,7 +258,7 @@ const AdminDashboard = () => {
                     ) : <span className="text-xs text-muted-foreground">—</span>}</td>
                   </tr>
                 ))}
-                {(!allWithdrawals || allWithdrawals.length === 0) && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">No withdrawals</td></tr>}
+                {(!allWithdrawals || allWithdrawals.length === 0) && <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">No withdrawals</td></tr>}
               </tbody>
             </table>
           </div></div>
