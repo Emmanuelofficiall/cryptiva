@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 
 const steps = [
   { num: "01", title: "Register & Verify", desc: "Create your account in 2 minutes and complete a simple verification process." },
-  { num: "02", title: "Deposit USDT", desc: "Fund your wallet by sending USDT via TRC20 network to get started." },
+  { num: "02", title: "Deposit USDT", desc: "Fund your wallet by sending USDT via TRC20 or BEP20 network to get started." },
   { num: "03", title: "Choose Plan", desc: "Select an investment plan that matches your financial goals and risk appetite." },
   { num: "04", title: "Earn Daily", desc: "Watch your investment grow with daily USDT returns automatically credited to your wallet." },
 ];

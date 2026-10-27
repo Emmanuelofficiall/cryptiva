@@ -20,7 +20,7 @@ BEGIN
  IF TG_OP='INSERT' THEN
   IF NEW.amount<=0 OR NEW.amount::text IN ('NaN','Infinity','-Infinity') THEN RAISE EXCEPTION 'Enter a valid deposit amount'; END IF;
   IF auth.uid() IS NOT NULL THEN
-   IF NEW.user_id<>auth.uid() OR NEW.status IS DISTINCT FROM 'pending' OR NEW.currency IS DISTINCT FROM 'USDT' OR NEW.method<>'TRC20 USDT' THEN RAISE EXCEPTION 'Invalid deposit request'; END IF;
+   IF NEW.user_id<>auth.uid() OR NEW.status IS DISTINCT FROM 'pending' OR NEW.currency IS DISTINCT FROM 'USDT' OR NEW.method NOT IN ('TRC20 USDT', 'BEP20 USDT') THEN RAISE EXCEPTION 'Invalid deposit request'; END IF;
    IF NEW.proof_path IS NULL OR NOT EXISTS(SELECT 1 FROM storage.objects o WHERE o.bucket_id='payment-proofs' AND o.name=NEW.proof_path AND (storage.foldername(o.name))[1]=auth.uid()::text AND lower(storage.extension(o.name)) IN ('jpg','jpeg','png','webp','pdf') AND (o.metadata->>'size')::bigint<=5242880 AND o.metadata->>'mimetype' IN ('image/jpeg','image/png','image/webp','application/pdf')) THEN RAISE EXCEPTION 'Upload a valid payment proof first'; END IF;
   END IF;
   NEW.invoice_number:='INV-'||upper(replace(NEW.id::text,'-',''));

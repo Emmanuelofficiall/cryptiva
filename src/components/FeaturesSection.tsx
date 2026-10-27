@@ -5,7 +5,7 @@ const features = [
   { icon: BarChart3, title: "Multiple Investment Plans", desc: "Choose from 6 crypto-powered plans with daily USDT returns up to 18%." },
   { icon: ArrowUpDown, title: "P2P Trading", desc: "Buy and sell USDT directly with other traders. Fast, secure, and commission-free." },
   { icon: TrendingUp, title: "Daily Returns", desc: "Earn consistent daily profits in USDT automatically credited to your wallet." },
-  { icon: Zap, title: "Instant Deposits", desc: "Deposit USDT via TRC20 network. Fast confirmations and secure transactions." },
+  { icon: Zap, title: "Instant Deposits", desc: "Deposit USDT via TRC20 or BEP20 network. Fast confirmations and secure transactions." },
   { icon: Shield, title: "Bank-Level Security", desc: "Your funds are protected with 256-bit encryption and verified transactions." },
   { icon: UserCheck, title: "Admin Verified", desc: "Every transaction is manually reviewed and approved by our trusted team." },
 ];

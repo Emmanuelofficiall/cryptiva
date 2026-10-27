@@ -889,6 +889,7 @@ const P2P = () => {
                         <option>Airtel Money</option>
                         <option>Bank Transfer</option>
                         <option>TRC20 USDT</option>
+                        <option>BEP20 USDT</option>
                         <option>M-Pesa</option>
                         <option>Wave</option>
                       </select>
@@ -997,6 +998,7 @@ const P2P = () => {
                   { name: "Western Union", desc: "Money transfer - Global", emoji: "💵" },
                   { name: "Skrill", desc: "Digital wallet - International", emoji: "💰" },
                   { name: "TRC20 USDT", desc: "Crypto wallet - TRON network", emoji: "🔗" },
+                  { name: "BEP20 USDT", desc: "Crypto wallet - BNB Smart Chain", emoji: "🟡" },
                 ].map((pm) => (
                   <div key={pm.name} className="glass-card p-4 flex items-center gap-4">
                     <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-xl">{pm.emoji}</div>

@@ -41,7 +41,7 @@ const HeroSection = () => {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">Platform Currency</p>
-                <p className="text-sm font-mono font-semibold text-foreground">USDT (TRC20)</p>
+                <p className="text-sm font-mono font-semibold text-foreground">USDT (TRC20 / BEP20)</p>
               </div>
               <span className="text-xs text-primary font-semibold ml-2 bg-primary/10 px-2 py-1 rounded-full">Live</span>
             </div>

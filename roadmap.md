@@ -1,7 +1,7 @@
 # Requested updates
 - [x] Premium bottom-menu colors
 - [x] Additional dashboard banner images
-- [x] Replace crypto deposit address
+- [x] Replace crypto deposit address (TRC20: TKNVnSnUzztwsQ43H5zyk9d5KVJfMCP9nJ) and add BEP20 address (0xf602d3039a4a8cc080e3ecebb755343b97919ca3) with network selection for deposits and withdrawals (TRC20 & BEP20)
 - [x] Automatic repeatable 100 USDT rewards per 15 distinct direct referrals purchasing $60+ plans
 - [x] Validate reward rules and signed-in screens
 - [x] Deposit proof upload, private admin review, and safe approval
