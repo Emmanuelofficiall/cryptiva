@@ -10,3 +10,4 @@
 - [x] Verify deposit and notification flow
 - [x] Merchant application form and admin review
 - [x] Apply admin buy/sell prices consistently throughout P2P; rule tests and signed-in conversion verified (no live merchant orders available to submit)
+- [x] Tasks must be done for each plan purchased (e.g. buying two plans requires completing tasks two times)

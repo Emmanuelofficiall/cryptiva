@@ -14,7 +14,7 @@ import banner3 from "@/assets/banner-3.jpg";
 import banner4 from "@/assets/banner-4.jpg";
 import {
   Wallet, TrendingUp, ArrowDownCircle, ArrowUpCircle,
-  Copy, Loader2, Calendar, User, Volume2, Layers, ArrowLeftRight, Users
+  Copy, Loader2, Calendar, User, Volume2, Layers, ArrowLeftRight, Users, ArrowRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -375,8 +375,13 @@ const UserDashboard = () => {
 
             {/* Active Investments */}
             <div className="glass-card overflow-hidden mb-8">
-              <div className="p-5 border-b border-border">
+              <div className="p-5 border-b border-border flex items-center justify-between">
                 <h3 className="font-display font-semibold text-foreground">Active Investments</h3>
+                {activeInvestments.length > 0 && (
+                  <Link to="/tasks" className="text-xs text-primary font-medium hover:underline flex items-center gap-1">
+                    Complete Daily Tasks <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                )}
               </div>
               {activeInvestments.length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground">

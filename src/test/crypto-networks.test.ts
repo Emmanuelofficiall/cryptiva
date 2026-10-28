@@ -32,3 +32,4 @@ describe("crypto networks and addresses", () => {
     expect(validateWithdrawAddress("TRC20 USDT", "")).toBe("Address required");
   });
 });
+
