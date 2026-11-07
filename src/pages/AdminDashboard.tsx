@@ -11,13 +11,14 @@ import {
 import AdminP2PPanel from "@/components/AdminP2PPanel";
 import PaymentProofButton from "@/components/PaymentProofButton";
 import AdminMerchantApplications from "@/components/AdminMerchantApplications";
+import AdminUserTeams from "@/components/AdminUserTeams";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Navigate } from "react-router-dom";
 
-type Tab = "overview" | "users" | "deposits" | "withdrawals" | "referrals" | "chat" | "merchants" | "p2p-settings" | "p2p-orders";
+type Tab = "overview" | "users" | "teams" | "deposits" | "withdrawals" | "referrals" | "chat" | "merchants" | "p2p-settings" | "p2p-orders";
 
 const AdminDashboard = () => {
   const { user, loading: authLoading } = useAuth();
@@ -36,7 +37,7 @@ const AdminDashboard = () => {
     },
   });
 
-  const { data: allProfiles } = useQuery({ queryKey: ["admin-profiles"], enabled: !!isAdmin, queryFn: async () => { const { data } = await supabase.from("profiles").select("*").order("created_at", { ascending: false }); return data || []; } });
+  const { data: allProfiles, isLoading: profilesLoading, error: profilesError } = useQuery({ queryKey: ["admin-profiles"], enabled: !!isAdmin, queryFn: async () => { const { data, error } = await supabase.from("profiles").select("*").order("created_at", { ascending: false }); if (error) throw error; return data || []; } });
   const { data: allDeposits, refetch: refetchDeposits } = useQuery({ queryKey: ["admin-deposits"], enabled: !!isAdmin, queryFn: async () => { const { data } = await supabase.from("deposits").select("*").order("created_at", { ascending: false }); return data || []; } });
   const { data: allWithdrawals, refetch: refetchWithdrawals } = useQuery({ queryKey: ["admin-withdrawals"], enabled: !!isAdmin, queryFn: async () => { const { data } = await supabase.from("withdrawals").select("*").order("created_at", { ascending: false }); return data || []; } });
   const { data: allInvestments } = useQuery({ queryKey: ["admin-investments"], enabled: !!isAdmin, queryFn: async () => { const { data } = await supabase.from("investments").select("*"); return data || []; } });
@@ -103,6 +104,7 @@ const AdminDashboard = () => {
   const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
     { key: "overview", label: "Overview", icon: BarChart3 },
     { key: "users", label: "Users", icon: Users },
+    { key: "teams", label: "Teams", icon: GitBranch },
     { key: "deposits", label: "Deposits", icon: DollarSign },
     { key: "withdrawals", label: "Withdrawals", icon: Activity },
     { key: "referrals", label: "Referrals", icon: GitBranch },
@@ -123,10 +125,10 @@ const AdminDashboard = () => {
 
         <div className="flex gap-1 mb-8 bg-secondary rounded-xl p-1 w-full sm:w-fit overflow-x-auto scrollbar-hide">
           {tabs.map((tab) => (
-            <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${activeTab === tab.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+            <Button variant="ghost" key={tab.key} onClick={() => setActiveTab(tab.key)}
+              className={`flex items-center shrink-0 gap-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${activeTab === tab.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
               <tab.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />{tab.label}
-            </button>
+            </Button>
           ))}
         </div>
 
@@ -201,6 +203,8 @@ const AdminDashboard = () => {
             </div></div>
           </div>
         )}
+
+        {activeTab === "teams" && (profilesLoading ? <Loader2 className="w-6 h-6 animate-spin text-primary" /> : profilesError ? <p className="text-destructive">Unable to load user teams. Please try again.</p> : <AdminUserTeams profiles={allProfiles || []} />)}
 
         {activeTab === "deposits" && (
           <div className="glass-card overflow-hidden"><div className="overflow-x-auto">

@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
+import { DEPOSIT_NETWORKS, PREFERRED_DEPOSIT_NETWORK } from "@/lib/crypto-networks";
 
 describe("crypto networks and addresses", () => {
-  const TRC20_ADDRESS = "TKNVnSnUzztwsQ43H5zyk9d5KVJfMCP9nJ";
-  const BEP20_ADDRESS = "0xf602d3039a4a8cc080e3ecebb755343b97919ca3";
+  const TRC20_ADDRESS = DEPOSIT_NETWORKS["TRC20 USDT"].address;
+  const BEP20_ADDRESS = DEPOSIT_NETWORKS["BEP20 USDT"].address;
+
+  it("prefers BEP20 while keeping TRC20 available", () => {
+    expect(PREFERRED_DEPOSIT_NETWORK).toBe("BEP20 USDT");
+    expect(Object.keys(DEPOSIT_NETWORKS)).toEqual(["BEP20 USDT", "TRC20 USDT"]);
+  });
 
   it("has valid TRC20 address format", () => {
     expect(TRC20_ADDRESS.startsWith("T")).toBe(true);

@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import PaymentProofButton from "@/components/PaymentProofButton";
 import { validatePaymentProof } from "@/lib/payment-proof";
+import { DEPOSIT_NETWORKS, PREFERRED_DEPOSIT_NETWORK, type DepositNetworkKey } from "@/lib/crypto-networks";
 import { Navigate, Link, useSearchParams } from "react-router-dom";
 import { useEffect } from "react";
 import banner1 from "@/assets/banner-1.jpg";
@@ -24,26 +25,6 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from "recharts";
 
-const DEPOSIT_NETWORKS = {
-  "TRC20 USDT": {
-    name: "TRC20 USDT",
-    network: "TRON (TRC20)",
-    badge: "TRC20",
-    address: "TKNVnSnUzztwsQ43H5zyk9d5KVJfMCP9nJ",
-    warning: "⚠ Only send USDT via TRC20 network. Transferring any other cryptocurrency or using another network may result in permanent loss.",
-    hint: "TRON network (TRC20)",
-  },
-  "BEP20 USDT": {
-    name: "BEP20 USDT",
-    network: "BNB Smart Chain (BEP20)",
-    badge: "BEP20",
-    address: "0xf602d3039a4a8cc080e3ecebb755343b97919ca3",
-    warning: "⚠ Only send USDT via BEP20 (BNB Smart Chain) network. Transferring any other cryptocurrency or using another network may result in permanent loss.",
-    hint: "BNB Smart Chain (BSC)",
-  },
-} as const;
-
-type DepositNetworkKey = keyof typeof DEPOSIT_NETWORKS;
 type WithdrawMethodKey = "TRC20 USDT" | "BEP20 USDT";
 const banners = [
   { img: banner1, t: "Grow Your Wealth", s: "Earn daily returns on USDT plans" },
@@ -67,7 +48,7 @@ const UserDashboard = () => {
     const i = setInterval(() => setSlide((s) => (s + 1) % banners.length), 6000);
     return () => clearInterval(i);
   }, []);
-  const [depositMethod, setDepositMethod] = useState<DepositNetworkKey>("TRC20 USDT");
+  const [depositMethod, setDepositMethod] = useState<DepositNetworkKey>(PREFERRED_DEPOSIT_NETWORK);
   const [depositAmount, setDepositAmount] = useState("");
   const [depositProof, setDepositProof] = useState<File | null>(null);
   const [proofInputKey, setProofInputKey] = useState(0);
@@ -531,11 +512,13 @@ const UserDashboard = () => {
                     const item = DEPOSIT_NETWORKS[key];
                     const active = depositMethod === key;
                     return (
-                      <button
+                      <Button
                         key={key}
                         type="button"
+                        variant="outline"
+                        aria-pressed={active}
                         onClick={() => setDepositMethod(key)}
-                        className={`p-3 rounded-xl border text-left transition-all ${
+                        className={`h-auto block p-3 rounded-lg border text-left whitespace-normal transition-all ${
                           active
                             ? "border-primary bg-primary/10 text-primary ring-1 ring-primary"
                             : "border-border bg-secondary/70 hover:border-border/80 text-foreground"
@@ -553,8 +536,9 @@ const UserDashboard = () => {
                             {item.badge}
                           </span>
                         </div>
+                        {key === PREFERRED_DEPOSIT_NETWORK && <span className="block mt-1 text-xs text-primary">Preferred</span>}
                         <div className="text-xs text-muted-foreground mt-1 truncate">{item.hint}</div>
-                      </button>
+                      </Button>
                     );
                   })}
                 </div>
