@@ -29,6 +29,13 @@
       "when": 1792500000000,
       "tag": "0003_deposit_and_withdrawal_bep20_support",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794083336054,
+      "tag": "0004_accept_bep20_deposit_proofs",
+      "breakpoints": true
     }
   ]
 }

@@ -5,6 +5,8 @@
 - Referral attribution is self-only and one-time before the first purchase; this prevents users from reassigning qualifying invitees.
 - Dashboard banners are declared in one ordered array used by both rotation and navigation; this keeps slide controls aligned with images.
 - Deposit proof files stay in private storage with owner/admin access; server validation generates invoices and credits each approved deposit atomically once.
+- Deposit network options share one configuration; server validation allows only supported USDT networks while retaining proof and approval protections.
+- Admin teams traverse profile referral IDs for three levels with cycle protection; this matches attribution without exposing admin data publicly.
 - Financial notifications are recorded by database event triggers with unique event keys; clients may only read their own alerts and mark them read.
 - Notification email delivery remains awaiting domain setup until the managed email infrastructure is configured; never claim queued alerts have been emailed.
 - Merchant applications are owner-submitted records; only the admin-validated review RPC activates merchants atomically, preventing self-approval and duplicate pending applications.
