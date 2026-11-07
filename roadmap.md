@@ -1,4 +1,6 @@
 # Requested updates
+- [ ] Fix BEP20 deposit acceptance and make it the preferred default
+- [ ] Show each user's referral team in admin
 - [x] Premium bottom-menu colors
 - [x] Additional dashboard banner images
 - [x] Replace crypto deposit address (TRC20: TKNVnSnUzztwsQ43H5zyk9d5KVJfMCP9nJ) and add BEP20 address (0xf602d3039a4a8cc080e3ecebb755343b97919ca3) with network selection for deposits and withdrawals (TRC20 & BEP20)
