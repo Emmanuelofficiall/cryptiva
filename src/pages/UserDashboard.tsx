@@ -55,7 +55,7 @@ const UserDashboard = () => {
   
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [withdrawDest, setWithdrawDest] = useState("");
-  const [withdrawMethod, setWithdrawMethod] = useState<WithdrawMethodKey>("TRC20 USDT");
+  const [withdrawMethod, setWithdrawMethod] = useState<WithdrawMethodKey>("BEP20 USDT");
   const [submitting, setSubmitting] = useState(false);
   const [editName, setEditName] = useState("");
   const [editingProfile, setEditingProfile] = useState(false);
@@ -687,8 +687,8 @@ const UserDashboard = () => {
                     onChange={(e) => setWithdrawMethod(e.target.value as WithdrawMethodKey)}
                     className="mt-1.5 w-full rounded-lg bg-secondary border border-border text-foreground p-2.5 text-sm"
                   >
+                    <option value="BEP20 USDT">BEP20 USDT (BNB Smart Chain) — Recommended</option>
                     <option value="TRC20 USDT">TRC20 USDT (TRON Network)</option>
-                    <option value="BEP20 USDT">BEP20 USDT (BNB Smart Chain)</option>
                   </select>
                 </div>
                 <div>
