@@ -43,6 +43,13 @@
       "when": 1794464004595,
       "tag": "0005_complete_exchange_task_rpc",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794464584663,
+      "tag": "0006_restrict_p2p_settings_read",
+      "breakpoints": true
     }
   ]
 }
