@@ -672,6 +672,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      complete_exchange_task: {
+        Args: { _action: string; _investment_id: string; _pair: string }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

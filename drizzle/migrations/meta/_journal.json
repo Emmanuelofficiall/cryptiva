@@ -36,6 +36,13 @@
       "when": 1794083336054,
       "tag": "0004_accept_bep20_deposit_proofs",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794464004595,
+      "tag": "0005_complete_exchange_task_rpc",
+      "breakpoints": true
     }
   ]
 }

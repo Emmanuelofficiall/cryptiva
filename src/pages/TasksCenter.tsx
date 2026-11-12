@@ -11,7 +11,6 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import CandlestickChart from "@/components/CandlestickChart";
 import {
   getTaskInvestmentId,
-  makeTaskDescription,
   getPlanDailyIncome,
   getPlanExchangeReward,
   formatPlanLabel,
@@ -21,7 +20,7 @@ const useCountdownToMidnight = () => {
   const getTimeLeft = useCallback(() => {
     const now = new Date();
     const midnight = new Date(now);
-    midnight.setHours(24, 0, 0, 0);
+    midnight.setUTCHours(24, 0, 0, 0);
     const diff = midnight.getTime() - now.getTime();
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -88,7 +87,7 @@ const TasksCenter = () => {
     return (investments || []).filter((i) => i.status === "active");
   }, [investments]);
 
-  const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const todayStr = new Date().toISOString().split("T")[0];
 
   // Helper to determine if a task is completed today
   const isTaskCompletedToday = useCallback(
@@ -105,12 +104,12 @@ const TasksCenter = () => {
   // Helper to get number of completed exchange tasks today for an investment
   const getCompletedCountForInv = useCallback(
     (invId: string) => {
-      return (tasks || []).filter(
+      return new Set((tasks || []).filter(
         (t) =>
           t.task_type === "exchange" &&
           getTaskInvestmentId(t) === invId &&
           isTaskCompletedToday(t)
-      ).length;
+      ).map((t) => t.title)).size;
     },
     [tasks, isTaskCompletedToday]
   );
@@ -131,77 +130,6 @@ const TasksCenter = () => {
     );
     setSelectedInvId(firstPending ? firstPending.id : activeInvestments[0].id);
   }, [activeInvestments, selectedInvId, getCompletedCountForInv]);
-
-  // Auto-initialize and reset exchange tasks per investment plan
-  useEffect(() => {
-    if (!user || tasksLoading || tasks === undefined || !investments) return;
-    if (activeInvestments.length === 0) return;
-
-    const init = async () => {
-      const exchangeTasks = tasks.filter((t) => t.task_type === "exchange");
-
-      // 1. Reset yesterday's tasks for all plans
-      const toReset = exchangeTasks.filter(
-        (t) =>
-          t.status === "completed" &&
-          t.completed_at &&
-          t.completed_at.split("T")[0] !== todayStr
-      );
-      if (toReset.length > 0) {
-        for (const task of toReset) {
-          await supabase
-            .from("user_tasks")
-            .update({ status: "pending", completed_at: null })
-            .eq("id", task.id);
-        }
-        queryClient.invalidateQueries({ queryKey: ["user-tasks", user.id] });
-        return;
-      }
-
-      let mutated = false;
-
-      // 2. Handle legacy unassigned tasks: assign to first active investment if it has none
-      const unassignedTasks = exchangeTasks.filter((t) => !getTaskInvestmentId(t));
-      if (unassignedTasks.length > 0) {
-        const firstInv = activeInvestments[0];
-        const firstInvTasks = exchangeTasks.filter((t) => getTaskInvestmentId(t) === firstInv.id);
-        if (firstInvTasks.length === 0) {
-          for (const task of unassignedTasks) {
-            await supabase
-              .from("user_tasks")
-              .update({
-                description: makeTaskDescription(task.title, firstInv.plan_name, firstInv.id),
-              })
-              .eq("id", task.id);
-          }
-          mutated = true;
-        }
-      }
-
-      // 3. Ensure each active investment has 5 exchange tasks
-      for (const inv of activeInvestments) {
-        const invTasks = exchangeTasks.filter((t) => getTaskInvestmentId(t) === inv.id);
-        if (invTasks.length === 0) {
-          const inserts = exchanges.map((e) => ({
-            user_id: user.id,
-            title: e.name,
-            description: makeTaskDescription(e.name, inv.plan_name, inv.id),
-            reward: 0,
-            task_type: "exchange",
-            status: "pending",
-          }));
-          await supabase.from("user_tasks").insert(inserts);
-          mutated = true;
-        }
-      }
-
-      if (mutated) {
-        queryClient.invalidateQueries({ queryKey: ["user-tasks", user.id] });
-      }
-    };
-
-    init();
-  }, [user, tasks, tasksLoading, investments, activeInvestments, todayStr, queryClient]);
 
   // Current active plan being viewed/operated
   const currentInv = useMemo(() => {
@@ -262,65 +190,20 @@ const TasksCenter = () => {
   const claimExchange = async (exchangeName: string, action: "buy" | "sell") => {
     if (!user || !currentInv) return;
 
-    const task = currentPlanTasks.find((t) => t.title === exchangeName && t.status === "pending");
-    if (!task) return;
-
     setSubmittingTrade(exchangeName);
-    const reward = currentExchangeReward;
-    const updatedDesc = makeTaskDescription(exchangeName, currentInv.plan_name, currentInv.id, action);
-
     try {
-      const { error: taskError } = await supabase
-        .from("user_tasks")
-        .update({
-          status: "completed",
-          completed_at: new Date().toISOString(),
-          reward,
-          description: updatedDesc,
-        })
-        .eq("id", task.id);
-
-      if (taskError) throw taskError;
-
-      // Credit to wallet
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("wallet_balance")
-        .eq("user_id", user.id)
-        .single();
-      if (profile) {
-        await supabase
-          .from("profiles")
-          .update({ wallet_balance: Number(profile.wallet_balance || 0) + reward })
-          .eq("user_id", user.id);
-      }
+      const { data: result, error: rpcError } = await supabase.rpc("complete_exchange_task", {
+        _investment_id: currentInv.id, _pair: exchangeName, _action: action,
+      });
+      if (rpcError) throw rpcError;
+      const res = result as { reward: number; completed: number; plan_finished: boolean };
+      const reward = Number(res.reward);
 
       // Check if this plan's 5 tasks are now fully completed
-      const newCompletedCount = currentPlanCompletedCount + 1;
-      const isPlanFinished = newCompletedCount >= exchanges.length;
+      const newCompletedCount = res.completed;
+      const isPlanFinished = res.plan_finished;
 
       if (isPlanFinished) {
-        // Record daily earnings for this investment
-        const { error: earnError } = await supabase.from("daily_earnings").insert({
-          user_id: user.id,
-          amount: currentInvDailyIncome,
-          investment_id: currentInv.id,
-        });
-        if (earnError) console.error("daily_earnings insert error:", earnError);
-
-        // Update total_earned on this investment
-        const { data: latestInv } = await supabase
-          .from("investments")
-          .select("total_earned")
-          .eq("id", currentInv.id)
-          .maybeSingle();
-        const currentEarned = Number(latestInv?.total_earned || 0);
-        const { error: invError } = await supabase
-          .from("investments")
-          .update({ total_earned: currentEarned + currentInvDailyIncome })
-          .eq("id", currentInv.id);
-        if (invError) console.error("investments update error:", invError);
-
         // Check for remaining active plans with pending tasks
         const nextPending = activeInvestments.find(
           (i) => i.id !== currentInv.id && getCompletedCountForInv(i.id) < exchanges.length
@@ -523,8 +406,7 @@ const TasksCenter = () => {
             {/* Exchange Pairs for Current Plan */}
             <div className="space-y-4">
               {exchanges.map((ex) => {
-                const pairTask = currentPlanTasks.find((t) => t.title === ex.name);
-                const isClaimed = pairTask ? isTaskCompletedToday(pairTask) : false;
+                const isClaimed = currentPlanTasks.some((t) => t.title === ex.name && isTaskCompletedToday(t));
                 const isSubmitting = submittingTrade === ex.name;
 
                 return (
@@ -563,7 +445,7 @@ const TasksCenter = () => {
                           <>
                             <Button
                               size="sm"
-                              disabled={isSubmitting}
+                              disabled={!!submittingTrade}
                               onClick={() => claimExchange(ex.name, "buy")}
                               className="bg-green-600 hover:bg-green-700 text-white text-xs gap-1 h-8"
                             >
@@ -572,7 +454,7 @@ const TasksCenter = () => {
                             </Button>
                             <Button
                               size="sm"
-                              disabled={isSubmitting}
+                              disabled={!!submittingTrade}
                               onClick={() => claimExchange(ex.name, "sell")}
                               className="bg-red-600 hover:bg-red-700 text-white text-xs gap-1 h-8"
                             >
